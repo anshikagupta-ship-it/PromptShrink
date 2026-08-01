@@ -1,107 +1,93 @@
-Hey! I'm building an internal Retrieval-Augmented Generation (RAG) pipeline for a customer support chatbot, and after two days of debugging I genuinely can't tell whether the issue is in my embeddings, chunking strategy, or vector database configuration.
+Hi! I hope you're doing well.
 
-The application is supposed to:
+I've been trying to solve this problem for almost two days now, and honestly I'm starting to think I'm looking at it completely the wrong way.
 
-- ingest PDF manuals,
-- split them into semantic chunks,
-- generate embeddings,
-- store them in Qdrant,
-- retrieve the top-k chunks,
-- and finally send them to an LLM.
+I'm working on a Rust application that processes a large number of log files. The overall architecture is actually working exactly as I intended, but there are a few issues that I simply cannot seem to understand.
 
-The retrieval quality is surprisingly poor even though everything appears to work.
+The application scans a directory, reads every file, parses each line, extracts structured information, stores it into memory, performs some analysis, and finally exports a JSON report.
 
-Here's the ingestion code.
+Everything compiles successfully.
 
-from sentence_transformers import SentenceTransformer
-from qdrant_client import QdrantClient
+The problem is that after processing around five thousand files the memory usage starts increasing dramatically until eventually the operating system kills the process.
 
-model = SentenceTransformer("all-MiniLM-L6-v2")
-client = QdrantClient(host="localhost", port=6333)
+I don't really know whether this is actually a memory leak, whether I'm accidentally cloning data somewhere, whether I'm holding references longer than I should, or whether my data structures are simply inefficient.
 
-embeddings = model.encode(chunks)
+Here's the parser.
 
-client.upsert(
-    collection_name="manuals",
-    points=[
-        {
-            "id": idx,
-            "vector": emb.tolist(),
-            "payload": {"text": chunk}
-        }
-        for idx, (emb, chunk) in enumerate(zip(embeddings, chunks))
-    ]
-)
+use std::fs;
 
-The retrieval code looks like this.
-
-query_embedding = model.encode(query).tolist()
-
-results = client.search(
-    collection_name="manuals",
-    query_vector=query_embedding,
-    limit=5
-)
-
-The documents are split using this function.
-
-def split_text(text):
-    return text.split("\n\n")
-
-The SQL schema for user feedback is
-
-CREATE TABLE feedback (
-    id SERIAL PRIMARY KEY,
-    question TEXT,
-    answer TEXT,
-    score INTEGER,
-    created_at TIMESTAMP
-);
-
-Configuration file
-
-{
-    "embedding_model": "all-MiniLM-L6-v2",
-    "chunk_size": 512,
-    "chunk_overlap": 64,
-    "top_k": 5,
-    "temperature": 0.2
+pub fn parse(path: &str) -> Result<Vec<String>, std::io::Error> {
+    let data = fs::read_to_string(path)?;
+    Ok(data.lines().map(|s| s.to_string()).collect())
 }
 
-I'm running everything with
+Here's how I'm calling it.
 
-docker compose up
+fn main() {
+    let logs = parse("logs.txt").unwrap();
 
-and then
+    analyze(logs);
+}
 
-python main.py
+The logs look something like this.
 
-The logs eventually become
+INFO Connected to server
+INFO Download complete
+WARNING Retry attempt 1
+WARNING Retry attempt 2
+ERROR Connection lost
 
-INFO Loading documents...
-INFO Generating embeddings...
-INFO Uploading vectors...
-INFO Retrieval complete.
-WARNING Similarity scores are unusually low.
-ERROR No relevant context found.
+I'm running the application using
 
-The repository is
+cargo run --release
 
-https://github.com/example/rag-pipeline
+The panic looks like this.
 
-The PDFs are mostly technical manuals (around 300 pages each), and users often ask questions that require information spanning multiple sections.
+thread 'main' panicked at src/main.rs:42:17:
+called `Result::unwrap()` on an `Err` value
 
-Could you please:
+Backtrace
 
-- identify every architectural issue,
-- explain whether my chunking strategy is appropriate,
-- explain why semantic search quality might be poor,
-- recommend better embedding models,
-- suggest improvements for retrieval,
-- explain whether reranking would help,
-- discuss hybrid search,
-- recommend evaluation metrics,
-- preserve the overall architecture,
-- avoid rewriting the project from scratch,
-- explain everything step by step because I'm still learning about RAG systems,
-- and if possible prioritize the fixes from highest impact to lowest impact?
+0: rust_begin_unwind
+1: core::panicking::panic_fmt
+2: core::result::unwrap_failed
+3: parser::main
+
+I have already tried all of the following:
+
+- restarting my computer,
+- rebuilding the project,
+- deleting Cargo.lock,
+- updating every dependency,
+- reinstalling Rust,
+- checking Stack Overflow,
+- reading the Rust book,
+- searching Reddit,
+- asking two friends,
+- adding println! statements literally everywhere,
+- using cargo clean,
+- trying different input files,
+- reducing the file size,
+- changing optimization levels,
+- switching from Vec<String> to Vec<&str>,
+- profiling with perf,
+- profiling with valgrind,
+- profiling with heaptrack.
+
+Unfortunately none of those things really helped me understand what's going on.
+
+What I'm hoping you can do is:
+
+- explain exactly why this panic happens,
+- identify every possible memory problem,
+- identify ownership mistakes,
+- explain whether unnecessary cloning is happening,
+- explain whether my parser design is appropriate,
+- recommend better data structures,
+- suggest architectural improvements,
+- preserve the current design as much as possible,
+- avoid rewriting the whole application,
+- explain everything step by step because I'm still learning Rust,
+- and please explain the reasoning behind every recommendation instead of only giving code because I genuinely want to understand what I'm doing wrong.
+
+I would really appreciate any help because I've spent almost an entire weekend on this one problem and I'm starting to feel like I'm just missing something obvious.

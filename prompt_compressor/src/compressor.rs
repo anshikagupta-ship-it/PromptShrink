@@ -1,5 +1,5 @@
 use crate::extractor::Document;
-use crate::lexer::{Token, TokenKind};
+use crate::lexer::{Token, TokenFlags, TokenKind};
 
 // Removed informative words (how, why, what, can, should).
 const STOPWORDS: &[&str] = &[
@@ -66,13 +66,26 @@ pub struct TokenStream {
 }
 
 impl TokenStream {
-    pub fn serialize(&self) -> String {
+    /// Serialize back to text. `source` must be the original document text
+    /// the tokens were lexed from -- non-SYNTHETIC tokens are re-sliced
+    /// out of it on demand (zero extra allocation beyond the output
+    /// buffer itself). SYNTHETIC tokens (collapsed whitespace/newline
+    /// markers created by the whitespace passes below) are emitted as a
+    /// single space or newline regardless of their stored byte range.
+    pub fn serialize(&self, source: &str) -> String {
         let mut out = String::new();
         for region in &self.regions {
             match region {
                 Region::English(tokens) | Region::Code(tokens) => {
                     for tok in tokens {
-                        out.push_str(&tok.text);
+                        if tok.flags.contains(TokenFlags::SYNTHETIC) {
+                            match tok.kind {
+                                TokenKind::Newline => out.push('\n'),
+                                _ => out.push(' '),
+                            }
+                        } else {
+                            out.push_str(tok.text(source));
+                        }
                     }
                 }
             }
@@ -82,6 +95,7 @@ impl TokenStream {
 }
 
 pub fn analyze_prompt(doc: &Document) -> PromptAnalysis {
+    let source = doc.original.as_str();
     let total_tokens = doc.tokens.iter().filter(|t| t.kind != TokenKind::Whitespace && t.kind != TokenKind::Newline).count();
     if total_tokens == 0 {
         return PromptAnalysis {
@@ -93,7 +107,7 @@ pub fn analyze_prompt(doc: &Document) -> PromptAnalysis {
     let mut boilerplate_tokens = 0;
     for tok in &doc.tokens {
         if tok.kind == TokenKind::Word {
-            if STOPWORDS.iter().any(|&s| s.eq_ignore_ascii_case(&tok.text)) {
+            if STOPWORDS.iter().any(|&s| s.eq_ignore_ascii_case(tok.text(source))) {
                 boilerplate_tokens += 1;
             }
         }
@@ -118,6 +132,7 @@ pub fn analyze_prompt(doc: &Document) -> PromptAnalysis {
 
 pub fn compress_prompt(doc: &Document) -> (String, CompressionResult) {
     let analysis = analyze_prompt(doc);
+    let source = doc.original.as_str();
 
     let opt_level = match analysis.size_category {
         PromptSize::Tiny => OptimizationLevel::Skip,
@@ -136,7 +151,10 @@ pub fn compress_prompt(doc: &Document) -> (String, CompressionResult) {
         return (doc.original.clone(), res);
     }
 
-    // O(N) partitioning of tokens into structural regions.
+    // O(N) partitioning of tokens into structural regions. Tokens are
+    // `Copy` (no owned text), so this is a memcpy-cheap duplication of
+    // small fixed-size structs -- not the heap-string-cloning cost the
+    // original design paid here.
     let mut regions = Vec::new();
     let mut current_region_tokens = Vec::new();
     let mut in_code = false;
@@ -162,7 +180,7 @@ pub fn compress_prompt(doc: &Document) -> (String, CompressionResult) {
             }
             in_code = tok_in_code;
         }
-        current_region_tokens.push(tok.clone());
+        current_region_tokens.push(*tok);
     }
 
     if !current_region_tokens.is_empty() {
@@ -179,8 +197,8 @@ pub fn compress_prompt(doc: &Document) -> (String, CompressionResult) {
         match region {
             Region::English(tokens) => {
                 if opt_level >= OptimizationLevel::Aggressive {
-                    phrase_pass(tokens);
-                    stopword_pass(tokens);
+                    phrase_pass(tokens, source);
+                    stopword_pass(tokens, source);
                 }
                 english_whitespace_pass(tokens);
             }
@@ -203,7 +221,7 @@ pub fn compress_prompt(doc: &Document) -> (String, CompressionResult) {
         .filter(|t| t.kind != TokenKind::Whitespace && t.kind != TokenKind::Newline)
         .count();
 
-    let compressed_text = stream.serialize().trim().to_string();
+    let compressed_text = stream.serialize(source).trim().to_string();
 
     let compression_ratio = if analysis.token_count > 0 {
         (analysis.token_count.saturating_sub(final_tokens)) as f32 / analysis.token_count as f32
@@ -221,8 +239,12 @@ pub fn compress_prompt(doc: &Document) -> (String, CompressionResult) {
     (compressed_text, res)
 }
 
-fn phrase_pass(tokens: &mut Vec<Token>) {
-    let mut to_delete = std::collections::HashSet::new();
+fn phrase_pass(tokens: &mut Vec<Token>, source: &str) {
+    // A byte-per-token bitmap instead of HashSet<usize>: on a large token
+    // vector this is roughly 50x leaner than a hash set (1 byte vs. the
+    // ~48-56 byte entry overhead a HashSet<usize> carries per member) and
+    // avoids per-insert hashing/allocation entirely.
+    let mut to_delete = vec![false; tokens.len()];
     let mut i = 0;
 
     while i < tokens.len() {
@@ -239,7 +261,7 @@ fn phrase_pass(tokens: &mut Vec<Token>) {
 
             while phrase_idx < phrase.len() && tok_idx < tokens.len() {
                 if tokens[tok_idx].kind == TokenKind::Word {
-                    if tokens[tok_idx].text.eq_ignore_ascii_case(phrase[phrase_idx]) {
+                    if tokens[tok_idx].text(source).eq_ignore_ascii_case(phrase[phrase_idx]) {
                         match_indices.push(tok_idx);
                         phrase_idx += 1;
                     } else {
@@ -250,20 +272,21 @@ fn phrase_pass(tokens: &mut Vec<Token>) {
             }
 
             if phrase_idx == phrase.len() {
-                let start = match_indices.first().unwrap();
-                let end = match_indices.last().unwrap();
-                for j in *start..=*end {
-                    to_delete.insert(j);
+                let start = *match_indices.first().unwrap();
+                let end = *match_indices.last().unwrap();
+                for j in start..=end {
+                    to_delete[j] = true;
                 }
 
                 // Fix Bug: Consume trailing whitespace or commas following the deleted phrase
                 let mut tail = end + 1;
                 while tail < tokens.len() && matches!(tokens[tail].kind, TokenKind::Whitespace | TokenKind::Punctuation) {
                     // Do not delete sentence-terminating punctuation
-                    if tokens[tail].text == "." || tokens[tail].text == "?" || tokens[tail].text == "!" {
+                    let t = tokens[tail].text(source);
+                    if t == "." || t == "?" || t == "!" {
                         break;
                     }
-                    to_delete.insert(tail);
+                    to_delete[tail] = true;
                     tail += 1;
                 }
 
@@ -277,69 +300,95 @@ fn phrase_pass(tokens: &mut Vec<Token>) {
         }
     }
 
-    let mut new_tokens = Vec::with_capacity(tokens.len());
-    for (idx, tok) in tokens.drain(..).enumerate() {
-        if !to_delete.contains(&idx) {
-            new_tokens.push(tok);
-        }
-    }
-    *tokens = new_tokens;
+    // In-place filter (Vec::retain never allocates a second buffer; it
+    // compacts kept elements down within the existing allocation).
+    let mut idx = 0;
+    tokens.retain(|_| {
+        let keep = !to_delete[idx];
+        idx += 1;
+        keep
+    });
 }
 
-fn stopword_pass(tokens: &mut Vec<Token>) {
-    // Zero-allocation scan
+fn stopword_pass(tokens: &mut Vec<Token>, source: &str) {
+    // Zero-allocation scan, in place.
     tokens.retain(|tok| {
         if tok.kind == TokenKind::Word {
-            !STOPWORDS.iter().any(|&s| s.eq_ignore_ascii_case(&tok.text))
+            !STOPWORDS.iter().any(|&s| s.eq_ignore_ascii_case(tok.text(source)))
         } else {
             true
         }
     });
 }
 
+/// Collapses runs of Whitespace/Newline tokens down to a single SYNTHETIC
+/// space, and trims a leading/trailing one. Implemented as an in-place
+/// two-pointer compaction (write index never gets ahead of read index)
+/// instead of draining into a second Vec, so this pass needs no extra
+/// buffer proportional to the region's size.
 fn english_whitespace_pass(tokens: &mut Vec<Token>) {
-    let mut new_tokens = Vec::with_capacity(tokens.len());
+    let mut write = 0;
     let mut last_was_space = false;
-    for tok in tokens.drain(..) {
-        if tok.kind == TokenKind::Whitespace || tok.kind == TokenKind::Newline {
-            if !last_was_space {
-                let mut space_tok = tok.clone();
-                space_tok.text = " ".to_string();
-                space_tok.kind = TokenKind::Whitespace;
-                new_tokens.push(space_tok);
-                last_was_space = true;
+
+    for read in 0..tokens.len() {
+        let tok = tokens[read];
+        let is_space = matches!(tok.kind, TokenKind::Whitespace | TokenKind::Newline);
+        if is_space {
+            if last_was_space {
+                continue;
             }
+            tokens[write] = Token {
+                kind: TokenKind::Whitespace,
+                start: tok.start,
+                end: tok.start,
+                flags: TokenFlags::SYNTHETIC,
+            };
+            write += 1;
+            last_was_space = true;
         } else {
-            new_tokens.push(tok);
+            tokens[write] = tok;
+            write += 1;
             last_was_space = false;
         }
     }
+    tokens.truncate(write);
 
-    if new_tokens.first().map_or(false, |t| t.kind == TokenKind::Whitespace) {
-        new_tokens.remove(0);
+    if tokens.first().map_or(false, |t| t.kind == TokenKind::Whitespace) {
+        tokens.remove(0);
     }
-    if new_tokens.last().map_or(false, |t| t.kind == TokenKind::Whitespace) {
-        new_tokens.pop();
+    if tokens.last().map_or(false, |t| t.kind == TokenKind::Whitespace) {
+        tokens.pop();
     }
-    *tokens = new_tokens;
 }
 
 fn comment_pass(tokens: &mut Vec<Token>) {
     tokens.retain(|tok| tok.kind != TokenKind::Comment);
 }
 
+/// Same in-place two-pointer strategy as `english_whitespace_pass`, ported
+/// to code's stricter whitespace rules (collapse runs, keep at most one
+/// blank line, don't insert a space next to brackets/punctuation).
 fn code_whitespace_pass(tokens: &mut Vec<Token>) {
-    let mut new_tokens = Vec::with_capacity(tokens.len());
+    fn is_safe_to_strip(k: TokenKind) -> bool {
+        matches!(k, TokenKind::Bracket | TokenKind::Punctuation)
+    }
+
+    let mut write = 0;
     let mut consecutive_newlines = 0;
     let mut pending_space = false;
 
-    for tok in tokens.drain(..) {
+    for read in 0..tokens.len() {
+        let tok = tokens[read];
         match tok.kind {
             TokenKind::Newline => {
                 if consecutive_newlines < 1 {
-                    let mut nl = tok.clone();
-                    nl.text = "\n".to_string();
-                    new_tokens.push(nl);
+                    tokens[write] = Token {
+                        kind: TokenKind::Newline,
+                        start: tok.start,
+                        end: tok.start,
+                        flags: TokenFlags::SYNTHETIC,
+                    };
+                    write += 1;
                     consecutive_newlines += 1;
                 }
                 pending_space = false;
@@ -349,33 +398,40 @@ fn code_whitespace_pass(tokens: &mut Vec<Token>) {
             }
             TokenKind::CodeBlock | TokenKind::InlineCode => {
                 if pending_space {
-                    let mut sp = tok.clone();
-                    sp.kind = TokenKind::Whitespace;
-                    sp.text = " ".to_string();
-                    new_tokens.push(sp);
+                    tokens[write] = Token {
+                        kind: TokenKind::Whitespace,
+                        start: tok.start,
+                        end: tok.start,
+                        flags: TokenFlags::SYNTHETIC,
+                    };
+                    write += 1;
                     pending_space = false;
                 }
                 consecutive_newlines = 0;
-                new_tokens.push(tok);
+                tokens[write] = tok;
+                write += 1;
             }
             _ => {
                 if pending_space {
-                    let is_safe_to_strip = |k: &TokenKind| matches!(k, TokenKind::Bracket | TokenKind::Punctuation);
-                    let prev_is_safe = new_tokens.last().map(|t| is_safe_to_strip(&t.kind)).unwrap_or(false);
-                    let curr_is_safe = is_safe_to_strip(&tok.kind);
+                    let prev_is_safe = write > 0 && is_safe_to_strip(tokens[write - 1].kind);
+                    let curr_is_safe = is_safe_to_strip(tok.kind);
 
                     if !prev_is_safe && !curr_is_safe {
-                        let mut sp = tok.clone();
-                        sp.kind = TokenKind::Whitespace;
-                        sp.text = " ".to_string();
-                        new_tokens.push(sp);
+                        tokens[write] = Token {
+                            kind: TokenKind::Whitespace,
+                            start: tok.start,
+                            end: tok.start,
+                            flags: TokenFlags::SYNTHETIC,
+                        };
+                        write += 1;
                     }
                     pending_space = false;
                 }
                 consecutive_newlines = 0;
-                new_tokens.push(tok);
+                tokens[write] = tok;
+                write += 1;
             }
         }
     }
-    *tokens = new_tokens;
+    tokens.truncate(write);
 }

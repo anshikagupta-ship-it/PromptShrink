@@ -11,10 +11,16 @@ bitflags! {
         const HAS_NUMBERS = 1 << 2;
         const IS_STOP_WORD = 1 << 3;
         const IS_BOILERPLATE = 1 << 4;
+        /// Set on tokens that a compression pass *synthesized* (e.g. a
+        /// single collapsed space standing in for a run of whitespace)
+        /// rather than sliced directly from the source text. Serialization
+        /// uses this to know whether `start..end` is a real byte range to
+        /// slice, or just a placeholder.
+        const SYNTHETIC = 1 << 5;
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum TokenKind {
     Word,
     Number,
@@ -31,13 +37,29 @@ pub enum TokenKind {
     Unknown,
 }
 
-#[derive(Debug, Clone)]
+/// A lexed token. Deliberately holds no owned text -- only the byte range
+/// into the original source string. This makes `Token` a plain `Copy`
+/// struct (no heap allocation, no allocator overhead per token), which is
+/// the single biggest lever for staying inside a tight memory budget: the
+/// original design allocated a fresh `String` per token and then cloned
+/// that string multiple times per compression pass.
+#[derive(Debug, Clone, Copy)]
 pub struct Token {
     pub kind: TokenKind,
-    pub text: String,
     pub start: usize,
     pub end: usize,
     pub flags: TokenFlags,
+}
+
+impl Token {
+    /// Borrow this token's text out of `source`. O(1), zero allocation.
+    /// `source` must be the same string the token was produced from (or,
+    /// for SYNTHETIC tokens, the caller shouldn't call this at all --
+    /// see `TokenStream::serialize`).
+    #[inline]
+    pub fn text<'a>(&self, source: &'a str) -> &'a str {
+        &source[self.start..self.end]
+    }
 }
 
 /// The Lexer acts as the Front-End scanner for our prompt compiler.
@@ -295,12 +317,6 @@ impl<'a> Lexer<'a> {
     }
 
     fn create_token(&self, kind: TokenKind, start: usize, end: usize, flags: TokenFlags) -> Token {
-        Token {
-            kind,
-            text: self.input[start..end].to_string(),
-            start,
-            end,
-            flags,
-        }
+        Token { kind, start, end, flags }
     }
 }

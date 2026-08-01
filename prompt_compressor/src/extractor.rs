@@ -121,7 +121,7 @@ fn extract_line_features(input: &str, tokens: &[Token]) -> Vec<LineFeatures> {
         match tok.kind {
             TokenKind::Whitespace => {
                 if lf.total_tokens == 0 {
-                    lf.indent_chars = tok.text.len();
+                    lf.indent_chars = tok.text(input).len();
                 }
                 continue;
             }
@@ -131,7 +131,7 @@ fn extract_line_features(input: &str, tokens: &[Token]) -> Vec<LineFeatures> {
             }
             TokenKind::Word => {
                 lf.word_tokens += 1;
-                let lower = tok.text.to_ascii_lowercase();
+                let lower = tok.text(input).to_ascii_lowercase();
                 if LANG_KEYWORDS.contains(&lower.as_str()) {
                     lf.lang_keyword_hits += 1;
                 } else if DOC_WORDS.contains(&lower.as_str()) {
@@ -139,21 +139,21 @@ fn extract_line_features(input: &str, tokens: &[Token]) -> Vec<LineFeatures> {
                 } else if ENGLISH_STOPWORDS.contains(&lower.as_str()) {
                     lf.stopword_hits += 1;
                 }
-                if is_camel_or_snake(&tok.text) {
+                if is_camel_or_snake(tok.text(input)) {
                     lf.camel_or_snake += 1;
                 }
                 if tok.flags.contains(TokenFlags::HAS_NUMBERS) {
                     lf.has_numbers = true;
                 }
                 let n = lf.word_tokens as f32;
-                lf.avg_word_len = lf.avg_word_len + (tok.text.len() as f32 - lf.avg_word_len) / n;
+                lf.avg_word_len = lf.avg_word_len + (tok.text(input).len() as f32 - lf.avg_word_len) / n;
             }
             TokenKind::Operator | TokenKind::Bracket => {
                 lf.symbol_tokens += 1;
             }
             TokenKind::Punctuation => {
                 lf.symbol_tokens += 1;
-                if tok.text == "?" {
+                if tok.text(input) == "?" {
                     lf.ends_with_question = true;
                 }
             }
@@ -166,8 +166,8 @@ fn extract_line_features(input: &str, tokens: &[Token]) -> Vec<LineFeatures> {
             tok.kind,
             TokenKind::Operator | TokenKind::Bracket | TokenKind::Punctuation
         );
-        if tok.kind == TokenKind::Punctuation && tok.text != "?" {
-            lf.ends_with_symbol = tok.text != "?";
+        if tok.kind == TokenKind::Punctuation && tok.text(input) != "?" {
+            lf.ends_with_symbol = tok.text(input) != "?";
         }
     }
 
@@ -238,7 +238,10 @@ fn find_context(
 }
 
 impl Document {
-    pub fn analyze(input: &str) -> Self {
+    /// Core analysis, shared by `analyze` (borrows) and `analyze_owned`
+    /// (takes ownership, used by the chunked streaming path in main.rs so
+    /// we don't pay for an extra full-text clone per chunk).
+    fn build(input: &str) -> (Vec<Token>, Vec<CodeBlock>) {
         // We now only lex exactly once.
         let tokens = Lexer::new(input).lex_all();
         let lines = extract_line_features(input, &tokens);
@@ -338,8 +341,30 @@ impl Document {
             _ => {}
         }
 
+        (tokens, blocks)
+    }
+
+    /// Analyze borrowed text. Clones `input` once into `original` -- fine
+    /// for small/one-shot inputs or library callers who don't already own
+    /// a `String`. For large inputs processed in a memory-bounded backend,
+    /// prefer `analyze_owned`.
+    pub fn analyze(input: &str) -> Self {
+        let (tokens, blocks) = Self::build(input);
         Document {
             original: input.to_string(),
+            tokens,
+            blocks,
+        }
+    }
+
+    /// Analyze text we already own, moving it straight into the Document
+    /// instead of cloning. This is the entry point the chunked streaming
+    /// reader in main.rs uses, since each chunk it reads is already an
+    /// owned `String` with nowhere else it needs to live.
+    pub fn analyze_owned(input: String) -> Self {
+        let (tokens, blocks) = Self::build(&input);
+        Document {
+            original: input,
             tokens,
             blocks,
         }
