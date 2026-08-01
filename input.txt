@@ -1,0 +1,107 @@
+Hey! I'm building an internal Retrieval-Augmented Generation (RAG) pipeline for a customer support chatbot, and after two days of debugging I genuinely can't tell whether the issue is in my embeddings, chunking strategy, or vector database configuration.
+
+The application is supposed to:
+
+- ingest PDF manuals,
+- split them into semantic chunks,
+- generate embeddings,
+- store them in Qdrant,
+- retrieve the top-k chunks,
+- and finally send them to an LLM.
+
+The retrieval quality is surprisingly poor even though everything appears to work.
+
+Here's the ingestion code.
+
+from sentence_transformers import SentenceTransformer
+from qdrant_client import QdrantClient
+
+model = SentenceTransformer("all-MiniLM-L6-v2")
+client = QdrantClient(host="localhost", port=6333)
+
+embeddings = model.encode(chunks)
+
+client.upsert(
+    collection_name="manuals",
+    points=[
+        {
+            "id": idx,
+            "vector": emb.tolist(),
+            "payload": {"text": chunk}
+        }
+        for idx, (emb, chunk) in enumerate(zip(embeddings, chunks))
+    ]
+)
+
+The retrieval code looks like this.
+
+query_embedding = model.encode(query).tolist()
+
+results = client.search(
+    collection_name="manuals",
+    query_vector=query_embedding,
+    limit=5
+)
+
+The documents are split using this function.
+
+def split_text(text):
+    return text.split("\n\n")
+
+The SQL schema for user feedback is
+
+CREATE TABLE feedback (
+    id SERIAL PRIMARY KEY,
+    question TEXT,
+    answer TEXT,
+    score INTEGER,
+    created_at TIMESTAMP
+);
+
+Configuration file
+
+{
+    "embedding_model": "all-MiniLM-L6-v2",
+    "chunk_size": 512,
+    "chunk_overlap": 64,
+    "top_k": 5,
+    "temperature": 0.2
+}
+
+I'm running everything with
+
+docker compose up
+
+and then
+
+python main.py
+
+The logs eventually become
+
+INFO Loading documents...
+INFO Generating embeddings...
+INFO Uploading vectors...
+INFO Retrieval complete.
+WARNING Similarity scores are unusually low.
+ERROR No relevant context found.
+
+The repository is
+
+https://github.com/example/rag-pipeline
+
+The PDFs are mostly technical manuals (around 300 pages each), and users often ask questions that require information spanning multiple sections.
+
+Could you please:
+
+- identify every architectural issue,
+- explain whether my chunking strategy is appropriate,
+- explain why semantic search quality might be poor,
+- recommend better embedding models,
+- suggest improvements for retrieval,
+- explain whether reranking would help,
+- discuss hybrid search,
+- recommend evaluation metrics,
+- preserve the overall architecture,
+- avoid rewriting the project from scratch,
+- explain everything step by step because I'm still learning about RAG systems,
+- and if possible prioritize the fixes from highest impact to lowest impact?
