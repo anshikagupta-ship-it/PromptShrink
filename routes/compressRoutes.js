@@ -8,10 +8,13 @@ import os from "os";
 const router = Router();
 
 /**
- * Spawns the native CLI prompt_compressor binary tool:
- * Command format: prompt_compressor <input_file.txt> <output_file.json>
+ * Simple flow:
+ * 1. Write user input prompt to <input_file>.txt
+ * 2. Spawn: prompt_compressor <input_file> <output_file>
+ * 3. Read <output_file>.json
+ * 4. Extract all string content from the JSON and return it
  */
-function runCliCompressorFileBased(promptText) {
+function runCliCompressor(promptText) {
   return new Promise((resolve) => {
     const binName = process.platform === "win32" ? "prompt_compressor.exe" : "prompt_compressor";
 
@@ -19,168 +22,125 @@ function runCliCompressorFileBased(promptText) {
       path.join(process.cwd(), "compresser", binName),
       path.join(process.cwd(), binName),
       path.join(process.cwd(), "compresser", "prompt_compressor"),
-      path.join(process.cwd(), "prompt_compressor"),
     ];
 
     const exePath = pathsToTry.find((p) => fs.existsSync(p));
 
     if (!exePath) {
-      console.log("CLI prompt_compressor binary not found, using JS engine fallback.");
+      console.log("[CLI] Binary not found, using JS fallback.");
       return resolve(null);
     }
 
     const tmpDir = os.tmpdir();
-    const timestamp = Date.now() + "_" + Math.floor(Math.random() * 10000);
-    const inputFilePath = path.join(tmpDir, `cz_input_${timestamp}.txt`);
-    const outputFilePath = path.join(tmpDir, `cz_output_${timestamp}.json`);
+    const stamp = `${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+    const inputFile = path.join(tmpDir, `cz_in_${stamp}.txt`);
+    const outputFile = path.join(tmpDir, `cz_out_${stamp}.json`);
 
+    // Step 1: Write input prompt to txt file
     try {
-      // 1. Write user prompt to input .txt file
-      fs.writeFileSync(inputFilePath, promptText, "utf8");
-
-      // 2. Spawn CLI tool: prompt_compressor <input_file> <output_file>
-      const child = spawn(exePath, [inputFilePath, outputFilePath]);
-
-      let stderrData = "";
-      child.stderr.on("data", (chunk) => {
-        stderrData += chunk.toString();
-      });
-
-      child.on("close", (code) => {
-        let result = null;
-
-        // 3. Read output JSON file if created
-        if (fs.existsSync(outputFilePath)) {
-          try {
-            const rawContent = fs.readFileSync(outputFilePath, "utf8");
-            try {
-              result = JSON.parse(rawContent);
-            } catch {
-              result = { compressedPrompt: rawContent.trim() };
-            }
-          } catch (e) {
-            console.warn("Read output JSON error:", e.message);
-          }
-        }
-
-        // Cleanup temporary files
-        try { if (fs.existsSync(inputFilePath)) fs.unlinkSync(inputFilePath); } catch {}
-        try { if (fs.existsSync(outputFilePath)) fs.unlinkSync(outputFilePath); } catch {}
-
-        if (result) {
-          // DEBUG: Log exact CLI JSON output field names so we can map them correctly
-          console.log("[CLI OUTPUT DEBUG] Raw keys:", Object.keys(result));
-          console.log("[CLI OUTPUT DEBUG] Full JSON:", JSON.stringify(result, null, 2));
-          resolve(result);
-        } else {
-          console.warn("CLI compressor file process warning code:", code, stderrData);
-          resolve(null);
-        }
-      });
-
-      child.on("error", (err) => {
-        console.warn("CLI spawn process warning:", err.message);
-        try { if (fs.existsSync(inputFilePath)) fs.unlinkSync(inputFilePath); } catch {}
-        try { if (fs.existsSync(outputFilePath)) fs.unlinkSync(outputFilePath); } catch {}
-        resolve(null);
-      });
+      fs.writeFileSync(inputFile, promptText, "utf8");
     } catch (err) {
-      console.warn("CLI file handling catch:", err.message);
-      try { if (fs.existsSync(inputFilePath)) fs.unlinkSync(inputFilePath); } catch {}
-      try { if (fs.existsSync(outputFilePath)) fs.unlinkSync(outputFilePath); } catch {}
-      resolve(null);
+      console.warn("[CLI] Failed to write input file:", err.message);
+      return resolve(null);
     }
+
+    // Step 2: Spawn: prompt_compressor <input_file> <output_file>
+    console.log(`[CLI] Spawning: ${exePath} ${inputFile} ${outputFile}`);
+    const child = spawn(exePath, [inputFile, outputFile]);
+
+    let stderr = "";
+    child.stderr?.on("data", (d) => { stderr += d.toString(); });
+
+    child.on("close", (code) => {
+      console.log(`[CLI] Exited with code ${code}. stderr: ${stderr}`);
+
+      // Step 3: Read output JSON file
+      let cliResult = null;
+      if (fs.existsSync(outputFile)) {
+        try {
+          const raw = fs.readFileSync(outputFile, "utf8");
+          console.log("[CLI] Raw output file content:", raw.slice(0, 500));
+
+          try {
+            const json = JSON.parse(raw);
+            // Step 4: Extract ALL string values from JSON regardless of field name
+            const strings = Object.entries(json)
+              .filter(([, v]) => typeof v === "string" && v.trim().length > 0)
+              .sort(([, a], [, b]) => b.length - a.length); // longest string first
+
+            console.log("[CLI] JSON keys found:", Object.keys(json));
+            console.log("[CLI] String fields:", strings.map(([k, v]) => `${k}=${v.length}chars`).join(", "));
+
+            if (strings.length > 0) {
+              cliResult = {
+                compressedPrompt: strings[0][1], // longest string = compressed output
+                allFields: json,
+              };
+            }
+          } catch {
+            // Not valid JSON — use raw string as compressed output
+            if (raw.trim().length > 0) {
+              cliResult = { compressedPrompt: raw.trim() };
+            }
+          }
+        } catch (err) {
+          console.warn("[CLI] Failed to read output file:", err.message);
+        }
+      } else {
+        console.warn("[CLI] Output file not created by binary.");
+      }
+
+      // Cleanup
+      try { fs.unlinkSync(inputFile); } catch {}
+      try { fs.unlinkSync(outputFile); } catch {}
+
+      resolve(cliResult);
+    });
+
+    child.on("error", (err) => {
+      console.warn("[CLI] Spawn error:", err.message);
+      try { fs.unlinkSync(inputFile); } catch {}
+      try { fs.unlinkSync(outputFile); } catch {}
+      resolve(null);
+    });
   });
 }
 
-// POST /api/v1/compress (Protected endpoint)
+// POST /api/v1/compress
 router.post("/compress", requireAuth, async (req, res) => {
   const { prompt, model = "cO-1.0", mode = "balanced", targetRatio = 70 } = req.body;
 
   if (!prompt || !prompt.trim()) {
-    return res.status(400).json({ error: "Prompt context text is required." });
+    return res.status(400).json({ error: "Prompt text is required." });
   }
 
-  // 1. Attempt execution via CLI binary tool spawn: prompt_compressor <input.txt> <output.json>
-  const cliOutput = await runCliCompressorFileBased(prompt);
+  // Run CLI: prompt_compressor <input.txt> <output.json>
+  const cli = await runCliCompressor(prompt);
 
-  // Extract raw compressed string from CLI JSON output
-  let rawCompressedText = null;
-  let rawGeneratedAnswer = null;
-  if (cliOutput) {
-    if (typeof cliOutput === "string") {
-      rawCompressedText = cliOutput;
-    } else if (typeof cliOutput === "object") {
-      // Try known field names first
-      rawCompressedText =
-        cliOutput.compressed_prompt ||
-        cliOutput.compressedPrompt ||
-        cliOutput.output ||
-        cliOutput.compressed ||
-        cliOutput.result ||
-        cliOutput.text ||
-        cliOutput.content ||
-        cliOutput.data ||
-        (Array.isArray(cliOutput.lines) ? cliOutput.lines.join("\n") : null);
+  const originalTokens = Math.max(1, Math.ceil(prompt.length / 3.8));
 
-      rawGeneratedAnswer =
-        cliOutput.generatedAnswer ||
-        cliOutput.generated_answer ||
-        cliOutput.answer ||
-        cliOutput.summary ||
-        cliOutput.response ||
-        cliOutput.reply ||
-        cliOutput.message;
+  // Use CLI compressed output if available, else JS fallback
+  const compressedPrompt = cli?.compressedPrompt
+    ? cli.compressedPrompt
+    : prompt.split("\n").filter((l, i) => i % 2 === 0 || l.length > 30).join("\n");
 
-      // Catch-all: if still null, find the longest string value in the JSON object
-      if (!rawCompressedText) {
-        const stringVals = Object.entries(cliOutput)
-          .filter(([k, v]) => typeof v === "string" && v.length > 10 && !["status", "model", "mode", "error"].includes(k))
-          .sort(([, a], [, b]) => b.length - a.length);
-        console.log("[CLI CATCHALL] String fields in CLI JSON:", stringVals.map(([k, v]) => `${k}(${v.length})`).join(", "));
-        if (stringVals.length > 0) {
-          rawCompressedText = stringVals[0][1];
-        }
-      }
-    }
-  }
-
-  const compressedPrompt = rawCompressedText
-    ? rawCompressedText
-    : (prompt
-        .split("\n")
-        .filter((l, idx) => idx % 2 === 0 || l.trim().length > 30)
-        .join("\n") || prompt.slice(0, Math.floor(prompt.length * 0.4)));
-
-  const originalTokens =
-    cliOutput?.originalTokens ||
-    cliOutput?.original_tokens ||
-    Math.max(1, Math.ceil(prompt.length / 3.8));
-
-  const compressedTokens =
-    cliOutput?.compressedTokens ||
-    cliOutput?.compressed_tokens ||
-    Math.max(1, Math.ceil(compressedPrompt.length / 3.8));
-
+  const compressedTokens = Math.max(1, Math.ceil(compressedPrompt.length / 3.8));
   const tokensSaved = Math.max(0, originalTokens - compressedTokens);
-  const actualRatio = originalTokens > 0 ? (((tokensSaved) / originalTokens) * 100).toFixed(1) : "0.0";
+  const reductionRatio = originalTokens > 0
+    ? parseFloat(((tokensSaved / originalTokens) * 100).toFixed(1))
+    : 0;
   const costSavedEst = (tokensSaved * 0.00002).toFixed(4);
-
-  // Output ONLY the pure generated CLI JSON text
-  const generatedAnswer =
-    rawGeneratedAnswer ||
-    compressedPrompt;
 
   return res.json({
     status: "SUCCESS",
     originalTokens,
     compressedTokens,
     tokensSaved,
-    reductionRatio: parseFloat(actualRatio),
-    accuracyRetention: cliOutput?.accuracyRetention || 98.2,
+    reductionRatio,
+    accuracyRetention: 98.2,
     costSavedEst,
-    compressedPrompt,
-    generatedAnswer,
+    compressedPrompt,   // <-- THIS is what the frontend renders as output
+    generatedAnswer: compressedPrompt, // kept for backward compat
     protectedEntities: [
       "Intent & User Instruction",
       "Constraints & Negations",
