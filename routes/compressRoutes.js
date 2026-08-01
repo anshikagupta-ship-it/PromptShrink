@@ -106,10 +106,12 @@ router.post("/compress", requireAuth, async (req, res) => {
 
   // Extract raw compressed string from CLI JSON output
   let rawCompressedText = null;
+  let rawGeneratedAnswer = null;
   if (cliOutput) {
     if (typeof cliOutput === "string") {
       rawCompressedText = cliOutput;
     } else if (typeof cliOutput === "object") {
+      // Try known field names first
       rawCompressedText =
         cliOutput.compressed_prompt ||
         cliOutput.compressedPrompt ||
@@ -120,6 +122,26 @@ router.post("/compress", requireAuth, async (req, res) => {
         cliOutput.content ||
         cliOutput.data ||
         (Array.isArray(cliOutput.lines) ? cliOutput.lines.join("\n") : null);
+
+      rawGeneratedAnswer =
+        cliOutput.generatedAnswer ||
+        cliOutput.generated_answer ||
+        cliOutput.answer ||
+        cliOutput.summary ||
+        cliOutput.response ||
+        cliOutput.reply ||
+        cliOutput.message;
+
+      // Catch-all: if still null, find the longest string value in the JSON object
+      if (!rawCompressedText) {
+        const stringVals = Object.entries(cliOutput)
+          .filter(([k, v]) => typeof v === "string" && v.length > 10 && !["status", "model", "mode", "error"].includes(k))
+          .sort(([, a], [, b]) => b.length - a.length);
+        console.log("[CLI CATCHALL] String fields in CLI JSON:", stringVals.map(([k, v]) => `${k}(${v.length})`).join(", "));
+        if (stringVals.length > 0) {
+          rawCompressedText = stringVals[0][1];
+        }
+      }
     }
   }
 
@@ -146,10 +168,7 @@ router.post("/compress", requireAuth, async (req, res) => {
 
   // Output ONLY the pure generated CLI JSON text
   const generatedAnswer =
-    cliOutput?.generatedAnswer ||
-    cliOutput?.generated_answer ||
-    cliOutput?.answer ||
-    cliOutput?.summary ||
+    rawGeneratedAnswer ||
     compressedPrompt;
 
   return res.json({
