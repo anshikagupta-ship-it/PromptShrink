@@ -109,13 +109,8 @@ export async function processCompression({ prompt, model = "cO-1.0", mode = "bal
 
   const lines = prompt.split("\n").filter((l) => l.trim().length > 0);
   const compressedLines = lines.filter((l, idx) => idx % 2 === 0 || l.trim().length > 30);
-  const compressedPrompt = `[COMPRESSED CONTEXT - ${actualRatio}% Reduction]\n` + 
-    (compressedLines.join("\n") || prompt.slice(0, Math.floor(prompt.length * 0.4)));
-
-  const generatedAnswer = `### Dynamic Compressed Output (${model})\n\n` +
-    `**Context Compression Metrics**: ${tokensSaved} tokens saved (${actualRatio}% reduction).\n\n` +
-    `#### Optimized Prompt Context:\n` +
-    compressedPrompt;
+  const compressedPrompt = compressedLines.join("\n") || prompt.slice(0, Math.floor(prompt.length * 0.4));
+  const generatedAnswer = compressedPrompt;
 
   return {
     originalTokens,
