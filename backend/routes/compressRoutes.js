@@ -141,7 +141,7 @@ router.post("/compress", requireAuth, async (req, res) => {
     ? cli.compressedPrompt
     : (() => {
         const lines = prompt.split("\n").filter(l => l.trim());
-        const kept = lines.filter((_, i) => i % 2 === 0 || l.length > 30);
+        const kept = lines.filter((l, i) => i % 2 === 0 || l.length > 30);
         return kept.join("\n") || prompt.slice(0, Math.floor(prompt.length * 0.5));
       })();
 
