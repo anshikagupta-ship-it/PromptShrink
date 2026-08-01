@@ -1,26 +1,39 @@
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap");
 @import "tailwindcss";
 
+:root{
+  color-scheme:dark;
+}
+
 *{
-margin:0;
-padding:0;
-box-sizing:border-box;
+  margin:0;
+  padding:0;
+  box-sizing:border-box;
 }
 
 html{
-scroll-behavior:smooth;
+  scroll-behavior:smooth;
 }
 
 body{
-background:#0B1220;
-color:white;
-font-family:Inter,sans-serif;
+  font-family:"Inter",sans-serif;
+  background:
+  radial-gradient(circle at top,#4f46e515 0%,transparent 35%),
+  radial-gradient(circle at right,#06b6d410 0%,transparent 30%),
+  #030712;
+  color:white;
+  overflow-x:hidden;
 }
 
 button{
-cursor:pointer;
-transition:.3s;
+  cursor:pointer;
 }
 
-a{
-text-decoration:none;
+::-webkit-scrollbar{
+  width:8px;
+}
+
+::-webkit-scrollbar-thumb{
+  background:#4f46e5;
+  border-radius:20px;
 }
