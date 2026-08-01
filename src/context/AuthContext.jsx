@@ -2,15 +2,23 @@ import React, { createContext, useContext, useState, useEffect } from "react";
 
 const AuthContext = createContext(null);
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8080";
 
 export function AuthProvider({ children }) {
-  const [user, setUser] = useState(null);
-  const [isLoading, setIsLoading] = useState(true);
+  // Initialize user instantly from localStorage cache for zero-delay refresh persistence
+  const [user, setUser] = useState(() => {
+    try {
+      const cached = localStorage.getItem("cz_user_profile");
+      return cached ? JSON.parse(cached) : null;
+    } catch {
+      return null;
+    }
+  });
+
+  const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
 
   const refreshUser = async () => {
-    setIsLoading(true);
     setError(null);
     try {
       const response = await fetch(`${API_BASE_URL}/api/auth/me`, {
@@ -23,17 +31,13 @@ export function AuthProvider({ children }) {
         const data = await response.json();
         if (data.authenticated && data.user) {
           setUser(data.user);
-        } else {
-          setUser(null);
+          try {
+            localStorage.setItem("cz_user_profile", JSON.stringify(data.user));
+          } catch {}
         }
-      } else {
-        setUser(null);
       }
     } catch (err) {
-      console.error("Auth check failed:", err);
-      setUser(null);
-    } finally {
-      setIsLoading(false);
+      console.warn("Auth check warning:", err);
     }
   };
 
@@ -59,6 +63,9 @@ export function AuthProvider({ children }) {
       }
 
       setUser(data.user);
+      try {
+        localStorage.setItem("cz_user_profile", JSON.stringify(data.user));
+      } catch {}
       setIsLoading(false);
       return data.user;
     } catch (err) {
@@ -81,6 +88,9 @@ export function AuthProvider({ children }) {
       console.error("Logout error:", err);
     } finally {
       setUser(null);
+      try {
+        localStorage.removeItem("cz_user_profile");
+      } catch {}
       setIsLoading(false);
     }
   };
