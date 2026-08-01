@@ -19,9 +19,6 @@ export const PRESET_SAMPLES = [
 [2026-08-01 10:14:12] INFO [notification-service] Sending alert to DevOps PagerDuty channel #alerts-p1.
 [2026-08-01 10:14:15] INFO [auth-service] Health check OK. Response time 15ms.
 [2026-08-01 10:14:20] INFO [auth-service] User session validated for user_id=98215.`,
-    originalTokens: 1240,
-    compressedTokens: 340,
-    reductionRatio: 72.6,
   },
   {
     id: "support-chat",
@@ -39,9 +36,6 @@ Customer (10:08 AM): Oh I see! I just paid invoice INV-4402 via credit card. Can
 Agent (10:10 AM): Verified! Invoice INV-4402 is settled. The Enterprise tier upgrade on plan #941 is now active.
 Customer (10:11 AM): Awesome, thank you Alex! Have a great day!
 Agent (10:12 AM): You're very welcome! Thank you for choosing CloudSupport!`,
-    originalTokens: 1850,
-    compressedTokens: 480,
-    reductionRatio: 74.1,
   },
   {
     id: "code-spec",
@@ -60,15 +54,14 @@ Error Responses:
 Endpoint /api/v2/users: Requires 'Authorization: Bearer <TOKEN>' and 'Content-Type: application/json'.
 Endpoint /api/v2/projects: Requires 'Authorization: Bearer <TOKEN>' and 'Content-Type: application/json'.
 Endpoint /api/v2/billing: Requires 'Authorization: Bearer <TOKEN>' and 'Content-Type: application/json'.`,
-    originalTokens: 2100,
-    compressedTokens: 520,
-    reductionRatio: 75.2,
   }
 ];
 
 export function estimateTokens(text) {
-  if (!text) return 0;
-  return Math.ceil(text.length / 3.8);
+  if (!text || typeof text !== "string") return 0;
+  const trimmed = text.trim();
+  if (!trimmed) return 0;
+  return Math.max(1, Math.ceil(trimmed.length / 3.8));
 }
 
 export async function processCompression({ prompt, model = "cO-1.0", mode = "balanced", targetRatio = 70 }) {
@@ -89,15 +82,18 @@ export async function processCompression({ prompt, model = "cO-1.0", mode = "bal
       }
     }
   } catch (err) {
-    console.warn("Backend API request, using dynamic client engine:", err);
+    console.warn("Backend API request warning, using dynamic client engine:", err);
   }
 
   // Dynamic client-side calculation fallback
+  const lines = prompt.split("\n").filter((l) => l.trim().length > 0);
+  const compressedLines = lines.filter((l, idx) => idx % 2 === 0 || l.trim().length > 30);
+  const compressedPrompt = compressedLines.join("\n") || prompt.slice(0, Math.floor(prompt.length * 0.5));
+
   const originalTokens = estimateTokens(prompt);
-  const ratioFloat = (targetRatio / 100);
-  const compressedTokens = Math.max(1, Math.round(originalTokens * (1 - ratioFloat)));
-  const actualRatio = originalTokens > 0 ? (((originalTokens - compressedTokens) / originalTokens) * 100).toFixed(1) : "0.0";
+  const compressedTokens = estimateTokens(compressedPrompt);
   const tokensSaved = Math.max(0, originalTokens - compressedTokens);
+  const actualRatio = originalTokens > 0 ? (((tokensSaved) / originalTokens) * 100).toFixed(1) : "0.0";
   const costSavedEst = (tokensSaved * 0.00002).toFixed(4);
 
   const protectedEntities = [
@@ -107,12 +103,7 @@ export async function processCompression({ prompt, model = "cO-1.0", mode = "bal
     "Format Requirements"
   ];
 
-  const lines = prompt.split("\n").filter((l) => l.trim().length > 0);
-  const compressedLines = lines.filter((l, idx) => idx % 2 === 0 || l.trim().length > 30);
-  const compressedPrompt = `[COMPRESSED CONTEXT - ${actualRatio}% Reduction]\n` + 
-    (compressedLines.join("\n") || prompt.slice(0, Math.floor(prompt.length * 0.4)));
-
-  const generatedAnswer = compressedLines.join("\n") || compressedPrompt;
+  const generatedAnswer = compressedPrompt;
 
   return {
     originalTokens,

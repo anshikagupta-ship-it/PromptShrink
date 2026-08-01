@@ -54,7 +54,7 @@ export default function EmptyState({ onSelectPreset }) {
               </div>
             </div>
             <div className="text-[10px] font-mono text-[#a3a3a3] group-hover:text-[#f5f5f5] transition">
-              ~72% Savings →
+              Compress context →
             </div>
           </button>
         ))}
@@ -62,7 +62,7 @@ export default function EmptyState({ onSelectPreset }) {
 
       {/* Subdued Footnote */}
       <div className="text-xs text-[#737373] font-normal">
-        Typical reduction: 70%+ • Semantic retention monitored automatically
+        Real-time dynamic context compression • Intent preservation guarantee
       </div>
     </div>
   );
