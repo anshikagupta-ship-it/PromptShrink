@@ -23,7 +23,12 @@ export default function Home() {
   const [prompt, setPrompt] = useState("");
   const [messages, setMessages] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [recentHistory, setRecentHistory] = useState([]);
+  const [recentHistory, setRecentHistory] = useState([
+    { id: "recent-1", title: "Incident log analysis" },
+    { id: "recent-2", title: "Customer support summary" },
+    { id: "recent-3", title: "API documentation" },
+    { id: "recent-4", title: "Database debugging" },
+  ]);
   const [latestResult, setLatestResult] = useState(null);
 
   // Inspector Drawer state
@@ -55,6 +60,16 @@ export default function Home() {
     }, 100);
   };
 
+  const handleRenameRecent = (id, newTitle) => {
+    setRecentHistory((prev) =>
+      prev.map((item) => (item.id === id ? { ...item, title: newTitle } : item))
+    );
+  };
+
+  const handleDeleteRecent = (id) => {
+    setRecentHistory((prev) => prev.filter((item) => item.id !== id));
+  };
+
   const handleSendWithText = async (overrideText) => {
     const textToSend = overrideText || prompt;
     if (!textToSend.trim() || isLoading) return;
@@ -82,9 +97,12 @@ export default function Home() {
     setPrompt("");
     setIsLoading(true);
 
+    const newHistId = `hist-${Date.now()}`;
+    const newHistTitle = textToSend.slice(0, 30) + "...";
+
     setRecentHistory((prev) => [
-      { id: `hist-${Date.now()}`, title: textToSend.slice(0, 30) + "..." },
-      ...prev.filter((item) => item.title !== textToSend.slice(0, 30) + "...").slice(0, 4),
+      { id: newHistId, title: newHistTitle },
+      ...prev.filter((item) => item.title !== newHistTitle).slice(0, 5),
     ]);
 
     // Process Compression Engine
@@ -126,6 +144,8 @@ export default function Home() {
         onNewCompression={handleNewCompression}
         recentItems={recentHistory}
         onSelectRecent={(item) => setCurrentView("chat")}
+        onRenameRecent={handleRenameRecent}
+        onDeleteRecent={handleDeleteRecent}
         isOpen={isSidebarOpen}
         setIsOpen={setIsSidebarOpen}
       />

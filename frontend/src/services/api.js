@@ -72,6 +72,24 @@ export function estimateTokens(text) {
 }
 
 export async function processCompression({ prompt, model = "gpt-4o", mode = "balanced", targetRatio = 70 }) {
+  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
+
+  try {
+    const res = await fetch(`${API_BASE_URL}/api/v1/compress`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify({ prompt, model, mode, targetRatio }),
+    });
+
+    if (res.ok) {
+      return await res.json();
+    }
+  } catch (err) {
+    console.warn("Backend API offline or unauthenticated, using client-side pre-processor engine fallback:", err);
+  }
+
+  // Fallback engine simulation
   await new Promise((resolve) => setTimeout(resolve, 800));
 
   const originalTokens = estimateTokens(prompt);

@@ -1,5 +1,5 @@
-import React from "react";
-import { PRESET_SAMPLES } from "../services/api";
+import React, { useState } from "react";
+import { useAuth } from "../context/AuthContext";
 
 export default function Sidebar({
   currentView,
@@ -7,17 +7,41 @@ export default function Sidebar({
   onNewCompression,
   recentItems = [],
   onSelectRecent,
+  onRenameRecent,
+  onDeleteRecent,
   isOpen,
   setIsOpen,
 }) {
-  const defaultRecents = [
-    { id: "recent-1", title: "Incident log analysis" },
-    { id: "recent-2", title: "Customer support summary" },
-    { id: "recent-3", title: "API documentation" },
-    { id: "recent-4", title: "Database debugging" },
-  ];
+  const { user, logout } = useAuth();
+  const [editingId, setEditingId] = useState(null);
+  const [editTitle, setEditTitle] = useState("");
 
-  const displayRecents = recentItems.length > 0 ? recentItems : defaultRecents;
+  const handleStartRename = (e, item) => {
+    e.stopPropagation();
+    setEditingId(item.id);
+    setEditTitle(item.title);
+  };
+
+  const handleSaveRename = (id) => {
+    if (editTitle.trim()) {
+      if (onRenameRecent) {
+        onRenameRecent(id, editTitle.trim());
+      }
+    }
+    setEditingId(null);
+  };
+
+  const handleCancelRename = (e) => {
+    e.stopPropagation();
+    setEditingId(null);
+  };
+
+  const handleDelete = (e, id) => {
+    e.stopPropagation();
+    if (onDeleteRecent) {
+      onDeleteRecent(id);
+    }
+  };
 
   return (
     <aside
@@ -60,24 +84,98 @@ export default function Sidebar({
           <span>New compression</span>
         </button>
 
-        {/* RECENT Conversations List */}
+        {/* RECENT Conversations List with Rename & Delete */}
         <div className="pt-2">
           <div className="text-[11px] font-medium text-[#737373] px-2 mb-1.5 uppercase tracking-wider">
             Recent
           </div>
-          <div className="space-y-0.5">
-            {displayRecents.map((item, idx) => (
-              <button
-                key={item.id || idx}
-                onClick={() => {
-                  setCurrentView("chat");
-                  if (onSelectRecent) onSelectRecent(item);
-                }}
-                className="w-full text-left px-2.5 py-1.5 rounded-md text-xs text-[#a3a3a3] hover:bg-[#262626] hover:text-[#f5f5f5] transition truncate block font-normal"
-              >
-                {item.title}
-              </button>
-            ))}
+          <div className="space-y-0.5 max-h-[320px] overflow-y-auto pr-0.5">
+            {recentItems.length === 0 ? (
+              <div className="text-[11px] text-[#737373] px-2.5 py-2 italic">
+                No recent conversations
+              </div>
+            ) : (
+              recentItems.map((item, idx) => {
+                const itemId = item.id || `recent-${idx}`;
+                const isEditing = editingId === itemId;
+
+                return (
+                  <div
+                    key={itemId}
+                    className="group relative flex items-center justify-between px-2 py-1 rounded-md text-xs hover:bg-[#262626] transition"
+                  >
+                    {isEditing ? (
+                      <div className="flex items-center gap-1 w-full" onClick={(e) => e.stopPropagation()}>
+                        <input
+                          type="text"
+                          value={editTitle}
+                          autoFocus
+                          onChange={(e) => setEditTitle(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") {
+                              e.preventDefault();
+                              handleSaveRename(itemId);
+                            }
+                            if (e.key === "Escape") {
+                              setEditingId(null);
+                            }
+                          }}
+                          className="w-full bg-[#1c1c1c] border border-white/20 text-[#f5f5f5] text-xs px-2 py-1 rounded focus:outline-none focus:border-emerald-500"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => handleSaveRename(itemId)}
+                          className="text-[#10B981] hover:text-emerald-400 p-1 font-bold text-xs shrink-0"
+                          title="Save title"
+                        >
+                          ✓
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleCancelRename}
+                          className="text-[#737373] hover:text-[#f5f5f5] p-1 text-xs shrink-0"
+                          title="Cancel"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    ) : (
+                      <>
+                        <button
+                          onClick={() => {
+                            setCurrentView("chat");
+                            if (onSelectRecent) onSelectRecent(item);
+                          }}
+                          className="text-left text-[#a3a3a3] group-hover:text-[#f5f5f5] truncate flex-1 block pr-2 py-0.5 font-normal"
+                        >
+                          {item.title}
+                        </button>
+
+                        {/* Action Buttons: Rename (✏️) & Delete (🗑️) */}
+                        <div className="hidden group-hover:flex items-center gap-1 shrink-0">
+                          <button
+                            type="button"
+                            onClick={(e) => handleStartRename(e, { ...item, id: itemId })}
+                            className="text-[#737373] hover:text-[#f5f5f5] p-1 rounded hover:bg-[#333333] transition"
+                            title="Rename"
+                          >
+                            ✏️
+                          </button>
+                          <button
+                            type="button"
+                            onClick={(e) => handleDelete(e, itemId)}
+                            className="text-[#737373] hover:text-red-400 p-1 rounded hover:bg-[#333333] transition"
+                            title="Delete"
+                          >
+                            🗑️
+                          </button>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                );
+              })
+            )}
           </div>
         </div>
 
@@ -101,9 +199,43 @@ export default function Sidebar({
         </div>
       </div>
 
-      {/* Visually Quiet Bottom */}
-      <div className="p-3 border-t border-white/[0.06] text-[11px] font-mono text-[#737373] text-center">
-        v1.0 • Pre-Processor
+      {/* User Account Profile & Logout Footer */}
+      <div className="p-3 border-t border-white/[0.06] bg-[#0d0d0d] space-y-2">
+        {user && (
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2 min-w-0">
+              {user.avatarUrl ? (
+                <img
+                  src={user.avatarUrl}
+                  alt={user.name}
+                  className="w-7 h-7 rounded-full border border-white/10 shrink-0"
+                />
+              ) : (
+                <div className="w-7 h-7 rounded-full bg-[#262626] text-white font-bold text-xs flex items-center justify-center border border-white/10 shrink-0">
+                  {user.name?.charAt(0).toUpperCase() || "U"}
+                </div>
+              )}
+              <div className="min-w-0 flex-1">
+                <div className="text-xs font-medium text-[#f5f5f5] truncate">
+                  {user.name}
+                </div>
+                <div className="text-[10px] text-[#737373] truncate font-mono">
+                  {user.email}
+                </div>
+              </div>
+            </div>
+
+            <button
+              onClick={logout}
+              title="Log out"
+              className="text-[#737373] hover:text-[#f5f5f5] p-1.5 rounded-md hover:bg-[#262626] transition shrink-0"
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+              </svg>
+            </button>
+          </div>
+        )}
       </div>
     </aside>
   );
