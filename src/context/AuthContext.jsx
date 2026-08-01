@@ -5,7 +5,7 @@ const AuthContext = createContext(null);
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8080";
 
 export function AuthProvider({ children }) {
-  // Initialize user from localStorage for 100% continuous persistent login across page refreshes
+  // Initialize user instantly from localStorage cache for zero-delay refresh persistence
   const [user, setUser] = useState(() => {
     try {
       const cached = localStorage.getItem("cz_user_profile");
@@ -19,14 +19,7 @@ export function AuthProvider({ children }) {
   const [error, setError] = useState(null);
 
   const refreshUser = async () => {
-    // Preserve local user profile if present so refresh never logs out
-    try {
-      const cached = localStorage.getItem("cz_user_profile");
-      if (cached) {
-        setUser(JSON.parse(cached));
-      }
-    } catch {}
-
+    setError(null);
     try {
       const response = await fetch(`${API_BASE_URL}/api/auth/me`, {
         method: "GET",
@@ -44,7 +37,7 @@ export function AuthProvider({ children }) {
         }
       }
     } catch (err) {
-      console.warn("Auth check background sync warning:", err);
+      console.warn("Auth check warning:", err);
     }
   };
 
