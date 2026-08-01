@@ -1,0 +1,46 @@
+name: Build Prompt Compressor
+
+on:
+  push:
+    branches:
+      - "**"
+
+  workflow_dispatch:
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        os:
+          - ubuntu-latest
+          - windows-latest
+
+    runs-on: ${{ matrix.os }}
+
+    defaults:
+      run:
+        working-directory: prompt_compressor
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Build Release
+        run: cargo build --release
+
+      - name: Upload Linux Binary
+        if: runner.os == 'Linux'
+        uses: actions/upload-artifact@v4
+        with:
+          name: prompt-compressor-linux
+          path: prompt_compressor/target/release/prompt_compressor
+
+      - name: Upload Windows Binary
+        if: runner.os == 'Windows'
+        uses: actions/upload-artifact@v4
+        with:
+          name: prompt-compressor-windows
+          path: prompt_compressor/target/release/prompt_compressor.exe
