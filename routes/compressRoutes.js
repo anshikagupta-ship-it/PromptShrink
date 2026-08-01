@@ -118,7 +118,7 @@ router.post("/compress", requireAuth, async (req, res) => {
       (prompt
         .split("\n")
         .filter((l, idx) => idx % 2 === 0 || l.trim().length > 30)
-        .join("\n") || prompt.slice(0, Math.floor(prompt.length * 0.3)));
+        .join("\n") || prompt.slice(0, Math.floor(prompt.length * 0.4)));
 
   const compressedTokens =
     cliOutput?.compressedTokens ||
@@ -129,21 +129,20 @@ router.post("/compress", requireAuth, async (req, res) => {
   const actualRatio = originalTokens > 0 ? (((tokensSaved) / originalTokens) * 100).toFixed(1) : "0.0";
   const costSavedEst = (tokensSaved * 0.00002).toFixed(4);
 
-  // 3. Dynamic generated answer summarizing the user's actual prompt
+  // 3. Dynamic generated answer summarizing the user's actual prompt in full without line limits
   let generatedAnswer = cliOutput?.generatedAnswer || cliOutput?.answer || cliOutput?.summary;
 
   if (!generatedAnswer) {
-    const summaryLines = compressedPrompt
+    const allSummaryLines = compressedPrompt
       .split("\n")
-      .filter((l) => l.trim() && !l.startsWith("["))
-      .slice(0, 5);
+      .filter((l) => l.trim() && !l.startsWith("["));
 
-    generatedAnswer = `### Compressed Context Analysis (${model})\n\n` +
-      `**Compression Metrics**: ${tokensSaved} tokens saved (${actualRatio}% reduction).\n\n` +
-      `#### Extracted Context Summary:\n` +
-      (summaryLines.length > 0
-        ? summaryLines.map((l, i) => `${i + 1}. ${l.trim()}`).join("\n")
-        : `1. Processed prompt context of ${originalTokens} tokens into ${compressedTokens} optimized tokens.\n2. Preserved core instructions and key entities.`);
+    generatedAnswer = `### Dynamic Compressed Output (${model})\n\n` +
+      `**Context Compression Metrics**: ${tokensSaved} tokens saved (${actualRatio}% reduction).\n\n` +
+      `#### Optimized Prompt Context:\n` +
+      (allSummaryLines.length > 0
+        ? allSummaryLines.map((l, i) => `${i + 1}. ${l.trim()}`).join("\n")
+        : compressedPrompt);
   }
 
   return res.json({
