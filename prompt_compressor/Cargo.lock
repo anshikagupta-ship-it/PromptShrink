@@ -273,6 +273,7 @@ dependencies = [
  "bitflags",
  "clap",
  "logos",
+ "once_cell",
  "rayon",
  "regex",
  "serde",

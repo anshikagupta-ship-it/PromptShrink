@@ -37,9 +37,14 @@ fn main() {
             process::exit(1);
         });
 
-    let doc = prompt_compressor::extractor::Document::analyze(&input);
+    let normalized =
+        prompt_compressor::canonical::canonicalize(&input);
 
-    let (compressed_prompt, _) = prompt_compressor::compressor::compress_prompt(&doc);
+    let doc =
+        prompt_compressor::extractor::Document::analyze(&normalized);
+
+    let (compressed_prompt, _) =
+        prompt_compressor::compressor::compress_prompt(&doc);
 
     let output = Output {
         prompt: compressed_prompt,

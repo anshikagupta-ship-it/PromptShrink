@@ -1,14 +1,12 @@
 name: Build Prompt Compressor
 
 on:
-  push:
-    branches:
-      - "**"
-
   workflow_dispatch:
 
 jobs:
   build:
+    name: Build (${{ matrix.os }})
+
     strategy:
       matrix:
         os:
@@ -25,8 +23,13 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Install Rust
+      - name: Install Rust Toolchain
         uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Cargo Dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: prompt_compressor
 
       - name: Build Release
         run: cargo build --release
@@ -37,6 +40,7 @@ jobs:
         with:
           name: prompt-compressor-linux
           path: prompt_compressor/target/release/prompt_compressor
+          if-no-files-found: error
 
       - name: Upload Windows Binary
         if: runner.os == 'Windows'
@@ -44,3 +48,4 @@ jobs:
         with:
           name: prompt-compressor-windows
           path: prompt_compressor/target/release/prompt_compressor.exe
+          if-no-files-found: error
