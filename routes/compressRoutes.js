@@ -25,7 +25,7 @@ function runCliCompressorFileBased(promptText) {
     const exePath = pathsToTry.find((p) => fs.existsSync(p));
 
     if (!exePath) {
-      console.log("CLI prompt_compressor binary not found, falling back to dynamic JS compressor engine.");
+      console.log("CLI prompt_compressor binary not found, using JS engine fallback.");
       return resolve(null);
     }
 
@@ -53,12 +53,13 @@ function runCliCompressorFileBased(promptText) {
         if (fs.existsSync(outputFilePath)) {
           try {
             const rawContent = fs.readFileSync(outputFilePath, "utf8");
-            result = JSON.parse(rawContent);
-          } catch {
             try {
-              const rawContent = fs.readFileSync(outputFilePath, "utf8");
+              result = JSON.parse(rawContent);
+            } catch {
               result = { compressedPrompt: rawContent.trim() };
-            } catch {}
+            }
+          } catch (e) {
+            console.warn("Read output JSON error:", e.message);
           }
         }
 
@@ -100,17 +101,24 @@ router.post("/compress", requireAuth, async (req, res) => {
   // 1. Attempt execution via CLI binary tool spawn: prompt_compressor <input.txt> <output.json>
   const cliOutput = await runCliCompressorFileBased(prompt);
 
-  // 2. Dynamic token & metrics calculations from real input text & CLI output
-  const originalTokens =
-    cliOutput?.originalTokens ||
-    cliOutput?.original_tokens ||
-    Math.max(1, Math.ceil(prompt.length / 3.8));
-
-  const rawCompressedText =
-    cliOutput?.compressedPrompt ||
-    cliOutput?.compressed_prompt ||
-    cliOutput?.output ||
-    cliOutput?.compressed;
+  // Extract raw compressed string from CLI JSON output
+  let rawCompressedText = null;
+  if (cliOutput) {
+    if (typeof cliOutput === "string") {
+      rawCompressedText = cliOutput;
+    } else if (typeof cliOutput === "object") {
+      rawCompressedText =
+        cliOutput.compressed_prompt ||
+        cliOutput.compressedPrompt ||
+        cliOutput.output ||
+        cliOutput.compressed ||
+        cliOutput.result ||
+        cliOutput.text ||
+        cliOutput.content ||
+        cliOutput.data ||
+        (Array.isArray(cliOutput.lines) ? cliOutput.lines.join("\n") : null);
+    }
+  }
 
   const compressedPrompt = rawCompressedText
     ? rawCompressedText
@@ -118,6 +126,11 @@ router.post("/compress", requireAuth, async (req, res) => {
         .split("\n")
         .filter((l, idx) => idx % 2 === 0 || l.trim().length > 30)
         .join("\n") || prompt.slice(0, Math.floor(prompt.length * 0.4)));
+
+  const originalTokens =
+    cliOutput?.originalTokens ||
+    cliOutput?.original_tokens ||
+    Math.max(1, Math.ceil(prompt.length / 3.8));
 
   const compressedTokens =
     cliOutput?.compressedTokens ||
@@ -128,7 +141,7 @@ router.post("/compress", requireAuth, async (req, res) => {
   const actualRatio = originalTokens > 0 ? (((tokensSaved) / originalTokens) * 100).toFixed(1) : "0.0";
   const costSavedEst = (tokensSaved * 0.00002).toFixed(4);
 
-  // 3. Generated answer outputs ONLY pure generated CLI text without headers
+  // Output ONLY the pure generated CLI JSON text
   const generatedAnswer =
     cliOutput?.generatedAnswer ||
     cliOutput?.generated_answer ||
