@@ -6,13 +6,25 @@ import { fileURLToPath } from "url";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const dbDir = path.join(__dirname, "../data");
-if (!fs.existsSync(dbDir)) {
-  fs.mkdirSync(dbDir, { recursive: true });
+// In production Linux containers (Render), use /tmp directory for write permissions
+let dbPath;
+if (process.env.NODE_ENV === "production") {
+  dbPath = "/tmp/contextzero.db";
+} else {
+  const dbDir = path.join(__dirname, "../data");
+  if (!fs.existsSync(dbDir)) {
+    fs.mkdirSync(dbDir, { recursive: true });
+  }
+  dbPath = path.join(dbDir, "contextzero.db");
 }
 
-const dbPath = path.join(dbDir, "contextzero.db");
-const db = new sqlite3.Database(dbPath);
+const db = new sqlite3.Database(dbPath, (err) => {
+  if (err) {
+    console.error("SQLite Database Connection Error:", err.message);
+  } else {
+    console.log(`SQLite DB initialized at: ${dbPath}`);
+  }
+});
 
 db.serialize(() => {
   // Create Users table
