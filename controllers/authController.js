@@ -29,11 +29,13 @@ export const AuthController = {
       // Step 3: Create server-managed application session
       const session = await SessionModel.createSession(user.id, 7);
 
-      // Step 4: Set secure HttpOnly cookie
+      // Step 4: Set secure cross-site HttpOnly cookie
+      const isProd = process.env.NODE_ENV === "production" || config.isProduction;
+
       res.cookie("contextzero_session", session.id, {
         httpOnly: true,
-        secure: config.isProduction,
-        sameSite: "lax",
+        secure: isProd,
+        sameSite: isProd ? "none" : "lax",
         path: "/",
         maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
       });
@@ -65,13 +67,25 @@ export const AuthController = {
 
       const session = await SessionModel.findSessionById(sessionId);
       if (!session) {
-        res.clearCookie("contextzero_session", { path: "/" });
+        const isProd = process.env.NODE_ENV === "production" || config.isProduction;
+        res.clearCookie("contextzero_session", {
+          httpOnly: true,
+          secure: isProd,
+          sameSite: isProd ? "none" : "lax",
+          path: "/",
+        });
         return res.status(401).json({ user: null, authenticated: false });
       }
 
       const user = await UserModel.findUserById(session.userId);
       if (!user) {
-        res.clearCookie("contextzero_session", { path: "/" });
+        const isProd = process.env.NODE_ENV === "production" || config.isProduction;
+        res.clearCookie("contextzero_session", {
+          httpOnly: true,
+          secure: isProd,
+          sameSite: isProd ? "none" : "lax",
+          path: "/",
+        });
         return res.status(401).json({ user: null, authenticated: false });
       }
 
@@ -97,10 +111,12 @@ export const AuthController = {
         await SessionModel.deleteSession(sessionId);
       }
 
+      const isProd = process.env.NODE_ENV === "production" || config.isProduction;
+
       res.clearCookie("contextzero_session", {
         httpOnly: true,
-        secure: config.isProduction,
-        sameSite: "lax",
+        secure: isProd,
+        sameSite: isProd ? "none" : "lax",
         path: "/",
       });
 
