@@ -10,10 +10,20 @@ import CompressionInspector from "../components/CompressionInspector";
 import BenchmarkPage from "../components/BenchmarkPage";
 import AnalyticsPage from "../components/AnalyticsPage";
 import { processCompression, PRESET_SAMPLES, estimateTokens } from "../services/api";
+import { useAuth } from "../context/AuthContext";
+import {
+  getUserConversations,
+  getConversationMessages,
+  saveConversationThread,
+  appendMessagesToConversation,
+  renameConversationDb,
+  deleteConversationDb,
+} from "../services/supabaseClient";
 
 export default function Home() {
+  const { user } = useAuth();
   const [currentView, setCurrentView] = useState("chat"); // 'chat' | 'benchmarks' | 'analytics'
-  const [model, setModel] = useState("gpt-4o");
+  const [model, setModel] = useState("cO-1.0");
   const [mode, setMode] = useState("balanced");
   const [targetRatio, setTargetRatio] = useState(70);
 
@@ -23,12 +33,18 @@ export default function Home() {
   const [prompt, setPrompt] = useState("");
   const [messages, setMessages] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [recentHistory, setRecentHistory] = useState([
-    { id: "recent-1", title: "Incident log analysis" },
-    { id: "recent-2", title: "Customer support summary" },
-    { id: "recent-3", title: "API documentation" },
-    { id: "recent-4", title: "Database debugging" },
-  ]);
+  const [activeConvoId, setActiveConvoId] = useState(null);
+
+  // Initialize recentHistory from localStorage cache for instant zero-delay render
+  const [recentHistory, setRecentHistory] = useState(() => {
+    try {
+      const cached = localStorage.getItem("cz_recent_history");
+      return cached ? JSON.parse(cached) : [];
+    } catch {
+      return [];
+    }
+  });
+
   const [latestResult, setLatestResult] = useState(null);
 
   // Inspector Drawer state
@@ -37,13 +53,45 @@ export default function Home() {
 
   const chatEndRef = useRef(null);
 
+  // Persist recent history to localStorage cache
+  useEffect(() => {
+    try {
+      if (recentHistory.length > 0) {
+        localStorage.setItem("cz_recent_history", JSON.stringify(recentHistory));
+      }
+    } catch (err) {
+      console.warn("localStorage cache save error:", err);
+    }
+  }, [recentHistory]);
+
+  // Sync conversations from Supabase on mount / user change
+  useEffect(() => {
+    async function loadDbConversations() {
+      const dbConvos = await getUserConversations(user?.id);
+      if (dbConvos && dbConvos.length > 0) {
+        setRecentHistory((prev) => {
+          return dbConvos.map((dbc) => {
+            const cached = prev.find((p) => p.id === dbc.id);
+            return {
+              ...dbc,
+              messages: cached?.messages || [],
+            };
+          });
+        });
+      }
+    }
+    loadDbConversations();
+  }, [user]);
+
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, isLoading]);
 
   const handleNewCompression = () => {
+    setActiveConvoId(null);
     setMessages([]);
     setPrompt("");
+    setLatestResult(null);
     setCurrentView("chat");
   };
 
@@ -60,14 +108,86 @@ export default function Home() {
     }, 100);
   };
 
+  const handleSelectRecent = async (item) => {
+    setCurrentView("chat");
+    setActiveConvoId(item.id);
+
+    // 1. Instant load from local cached messages
+    let hasLoaded = false;
+    if (item.messages && item.messages.length > 0) {
+      setMessages(item.messages);
+      const lastAssistant = [...item.messages].reverse().find((m) => m.result);
+      if (lastAssistant?.result) {
+        setLatestResult(lastAssistant.result);
+      }
+      hasLoaded = true;
+    }
+
+    // 2. Fetch/sync from Supabase DB
+    if (item.id && !item.id.startsWith("hist-")) {
+      setIsLoading(!hasLoaded);
+      const dbMsgs = await getConversationMessages(item.id);
+      if (dbMsgs && dbMsgs.length > 0) {
+        const mappedMsgs = dbMsgs.map((m) => ({
+          id: m.id,
+          sender: m.sender,
+          text: m.content,
+          originalTokens: m.original_tokens,
+          result:
+            m.sender === "assistant"
+              ? {
+                  originalTokens: m.original_tokens,
+                  compressedTokens: m.compressed_tokens,
+                  reductionRatio: m.reduction_ratio,
+                  generatedAnswer: m.content,
+                  compressedPrompt: m.content,
+                  accuracyRetention: 98.2,
+                }
+              : null,
+        }));
+
+        setMessages(mappedMsgs);
+        const lastAssistant = mappedMsgs.slice().reverse().find((m) => m.result);
+        if (lastAssistant?.result) {
+          setLatestResult(lastAssistant.result);
+        }
+
+        // Cache mapped messages on current item
+        setRecentHistory((prev) => {
+          const updated = prev.map((p) => (p.id === item.id ? { ...p, messages: mappedMsgs } : p));
+          try {
+            localStorage.setItem("cz_recent_history", JSON.stringify(updated));
+          } catch {}
+          return updated;
+        });
+      }
+      setIsLoading(false);
+    }
+  };
+
   const handleRenameRecent = (id, newTitle) => {
-    setRecentHistory((prev) =>
-      prev.map((item) => (item.id === id ? { ...item, title: newTitle } : item))
-    );
+    setRecentHistory((prev) => {
+      const updated = prev.map((item) => (item.id === id ? { ...item, title: newTitle } : item));
+      try {
+        localStorage.setItem("cz_recent_history", JSON.stringify(updated));
+      } catch {}
+      return updated;
+    });
+    renameConversationDb(id, newTitle);
   };
 
   const handleDeleteRecent = (id) => {
-    setRecentHistory((prev) => prev.filter((item) => item.id !== id));
+    setRecentHistory((prev) => {
+      const updated = prev.filter((item) => item.id !== id);
+      try {
+        localStorage.setItem("cz_recent_history", JSON.stringify(updated));
+      } catch {}
+      return updated;
+    });
+    deleteConversationDb(id);
+    if (activeConvoId === id) {
+      handleNewCompression();
+    }
   };
 
   const handleSendWithText = async (overrideText) => {
@@ -87,23 +207,16 @@ export default function Home() {
     const assistantMsg = {
       id: assistantMsgId,
       sender: "assistant",
-      text: textToSend,
+      text: "",
       originalTokens: origTokens,
       isProcessing: true,
       result: null,
     };
 
-    setMessages((prev) => [...prev, userMsg, assistantMsg]);
+    const currentStream = [...messages, userMsg, assistantMsg];
+    setMessages(currentStream);
     setPrompt("");
     setIsLoading(true);
-
-    const newHistId = `hist-${Date.now()}`;
-    const newHistTitle = textToSend.slice(0, 30) + "...";
-
-    setRecentHistory((prev) => [
-      { id: newHistId, title: newHistTitle },
-      ...prev.filter((item) => item.title !== newHistTitle).slice(0, 5),
-    ]);
 
     // Process Compression Engine
     const res = await processCompression({
@@ -115,17 +228,63 @@ export default function Home() {
 
     setLatestResult(res);
 
+    const updatedAssistantMsg = {
+      ...assistantMsg,
+      text: res.generatedAnswer || res.compressedPrompt,
+      isProcessing: false,
+      result: res,
+    };
+
+    const finalStream = [...messages, userMsg, updatedAssistantMsg];
+
     setMessages((prev) =>
-      prev.map((msg) =>
-        msg.id === assistantMsgId
-          ? {
-              ...msg,
-              isProcessing: false,
-              result: res,
-            }
-          : msg
-      )
+      prev.map((msg) => (msg.id === assistantMsgId ? updatedAssistantMsg : msg))
     );
+
+    // Persist to Supabase Database
+    if (!activeConvoId) {
+      // First turn in a new chat session -> Create new conversation thread in DB
+      const newTitle = textToSend.slice(0, 30) + "...";
+      const savedConvo = await saveConversationThread({
+        userId: user?.id,
+        title: newTitle,
+        model,
+        targetRatio,
+        promptText: textToSend,
+        result: res,
+      });
+
+      const convoId = savedConvo?.id || `hist-${Date.now()}`;
+      setActiveConvoId(convoId);
+
+      setRecentHistory((prev) => {
+        const nextList = [
+          { id: convoId, title: newTitle, messages: finalStream },
+          ...prev.filter((item) => item.id !== convoId).slice(0, 9),
+        ];
+        try {
+          localStorage.setItem("cz_recent_history", JSON.stringify(nextList));
+        } catch {}
+        return nextList;
+      });
+    } else {
+      // Subsequent turn in existing active chat session -> Append turn to DB under activeConvoId
+      await appendMessagesToConversation({
+        conversationId: activeConvoId,
+        promptText: textToSend,
+        result: res,
+      });
+
+      setRecentHistory((prev) => {
+        const nextList = prev.map((item) =>
+          item.id === activeConvoId ? { ...item, messages: finalStream } : item
+        );
+        try {
+          localStorage.setItem("cz_recent_history", JSON.stringify(nextList));
+        } catch {}
+        return nextList;
+      });
+    }
 
     setIsLoading(false);
   };
@@ -143,7 +302,7 @@ export default function Home() {
         setCurrentView={setCurrentView}
         onNewCompression={handleNewCompression}
         recentItems={recentHistory}
-        onSelectRecent={(item) => setCurrentView("chat")}
+        onSelectRecent={handleSelectRecent}
         onRenameRecent={handleRenameRecent}
         onDeleteRecent={handleDeleteRecent}
         isOpen={isSidebarOpen}

@@ -13,9 +13,9 @@ export default function ChatHeader({
   onToggleDashboard,
 }) {
   const models = [
-    { id: "gpt-4o", name: "GPT-4o" },
-    { id: "claude-3-5-sonnet", name: "Claude 3.5 Sonnet" },
-    { id: "llama-3-70b", name: "Llama 3 70B" },
+    { id: "cO-1.0", name: "cO 1.0 (Default Engine)" },
+    { id: "cO-1.0-pro", name: "cO 1.0 Pro" },
+    { id: "cO-1.0-flash", name: "cO 1.0 Flash" },
   ];
 
   return (
@@ -37,7 +37,7 @@ export default function ChatHeader({
           <select
             value={model}
             onChange={(e) => setModel(e.target.value)}
-            className="bg-transparent text-[#f5f5f5] text-xs font-medium px-2.5 py-1.5 rounded-md border border-white/[0.07] hover:bg-[#1a1a1a] focus:outline-none focus:border-white/20 cursor-pointer appearance-none pr-7 transition"
+            className="bg-[#171717] text-[#f5f5f5] text-xs font-semibold px-3 py-1.5 rounded-md border border-white/20 hover:bg-[#262626] focus:outline-none focus:border-emerald-500 cursor-pointer appearance-none pr-8 transition"
           >
             {models.map((m) => (
               <option key={m.id} value={m.id} className="bg-[#1a1a1a] text-[#f5f5f5]">

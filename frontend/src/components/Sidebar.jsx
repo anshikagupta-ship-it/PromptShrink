@@ -84,15 +84,15 @@ export default function Sidebar({
           <span>New compression</span>
         </button>
 
-        {/* RECENT Conversations List with Rename & Delete */}
+        {/* RECENT Conversations List */}
         <div className="pt-2">
           <div className="text-[11px] font-medium text-[#737373] px-2 mb-1.5 uppercase tracking-wider">
             Recent
           </div>
           <div className="space-y-0.5 max-h-[320px] overflow-y-auto pr-0.5">
             {recentItems.length === 0 ? (
-              <div className="text-[11px] text-[#737373] px-2.5 py-2 italic">
-                No recent conversations
+              <div className="text-[11px] text-[#737373] px-2 py-3 italic">
+                No recent conversations. Start a new compression!
               </div>
             ) : (
               recentItems.map((item, idx) => {
