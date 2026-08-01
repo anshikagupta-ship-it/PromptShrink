@@ -45,6 +45,7 @@ pub struct Lexer<'a> {
     input: &'a str,
     chars: CharIndices<'a>,
     current_char: Option<(usize, char)>,
+    prev_char: Option<char>,
 }
 
 impl<'a> Lexer<'a> {
@@ -55,6 +56,7 @@ impl<'a> Lexer<'a> {
             input,
             chars,
             current_char,
+            prev_char: None,
         }
     }
 
@@ -69,6 +71,7 @@ impl<'a> Lexer<'a> {
 
     /// Advances the iterator to the next character.
     fn advance(&mut self) {
+        self.prev_char = self.current_char.map(|(_, c)| c);
         self.current_char = self.chars.next();
     }
 
@@ -129,7 +132,18 @@ impl<'a> Lexer<'a> {
         }
 
         // 7. Strings (Double and Single Quotes)
-        if c == '"' || c == '\'' {
+        // A `'` right after an alphanumeric char is almost always a
+        // contraction or possessive ("don't", "it's", "James'") rather than
+        // the start of a char/string literal — treat it as punctuation.
+        if c == '"' {
+            return Some(self.lex_string(start, c));
+        }
+        if c == '\'' {
+            let prev_is_alnum = self.prev_char.map_or(false, |pc| pc.is_alphanumeric());
+            if prev_is_alnum {
+                self.advance();
+                return Some(self.create_token(TokenKind::Punctuation, start, self.current_pos(), TokenFlags::NONE));
+            }
             return Some(self.lex_string(start, c));
         }
 
@@ -302,5 +316,3 @@ impl<'a> Lexer<'a> {
         }
     }
 }
-
-
