@@ -129,20 +129,14 @@ router.post("/compress", requireAuth, async (req, res) => {
   const actualRatio = originalTokens > 0 ? (((tokensSaved) / originalTokens) * 100).toFixed(1) : "0.0";
   const costSavedEst = (tokensSaved * 0.00002).toFixed(4);
 
-  // 3. Dynamic generated answer summarizing the user's actual prompt in full without line limits
+  // 3. Dynamic generated answer summarizing the user's actual prompt cleanly without line number prefixes
   let generatedAnswer = cliOutput?.generatedAnswer || cliOutput?.answer || cliOutput?.summary;
 
   if (!generatedAnswer) {
-    const allSummaryLines = compressedPrompt
-      .split("\n")
-      .filter((l) => l.trim() && !l.startsWith("["));
-
     generatedAnswer = `### Dynamic Compressed Output (${model})\n\n` +
       `**Context Compression Metrics**: ${tokensSaved} tokens saved (${actualRatio}% reduction).\n\n` +
       `#### Optimized Prompt Context:\n` +
-      (allSummaryLines.length > 0
-        ? allSummaryLines.map((l, i) => `${i + 1}. ${l.trim()}`).join("\n")
-        : compressedPrompt);
+      compressedPrompt;
   }
 
   return res.json({
