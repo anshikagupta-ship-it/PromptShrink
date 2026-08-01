@@ -1,11 +1,13 @@
-import Navbar from "../components/Navbar";
-import Hero from "../components/Hero";
+import Navbar from "../components/layout/Navbar";
+import Hero from "../components/hero/Hero";
 
-export default function Home() {
+function Home() {
   return (
-    <div className="min-h-screen bg-[#0B1220] text-white">
+    <div className="bg-[#0B1220] min-h-screen text-white">
       <Navbar />
       <Hero />
     </div>
   );
 }
+
+export default Home;
