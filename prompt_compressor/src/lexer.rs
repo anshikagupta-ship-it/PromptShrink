@@ -3,15 +3,14 @@ use std::str::CharIndices;
 
 bitflags! {
     /// Flags to annotate tokens during lexing or later optimization passes.
-    /// This allows O(1) checks during compression passes instead of string matching.
     #[derive(Debug, Clone, Copy, PartialEq, Eq)]
     pub struct TokenFlags: u32 {
         const NONE = 0;
         const CAPITALIZED = 1 << 0;
         const ALL_CAPS = 1 << 1;
         const HAS_NUMBERS = 1 << 2;
-        const IS_STOP_WORD = 1 << 3; // To be populated by a later pass
-        const IS_BOILERPLATE = 1 << 4; // To be populated by a later pass
+        const IS_STOP_WORD = 1 << 3;
+        const IS_BOILERPLATE = 1 << 4;
     }
 }
 
@@ -28,6 +27,7 @@ pub enum TokenKind {
     Bracket,
     Whitespace,
     Newline,
+    Comment,
     Unknown,
 }
 
@@ -69,42 +69,33 @@ impl<'a> Lexer<'a> {
         tokens
     }
 
-    /// Advances the iterator to the next character.
     fn advance(&mut self) {
         self.prev_char = self.current_char.map(|(_, c)| c);
         self.current_char = self.chars.next();
     }
 
-    /// Peeks at the current character without advancing.
     fn peek_char(&self) -> Option<char> {
         self.current_char.map(|(_, c)| c)
     }
 
-    /// Gets the current byte index. If EOF, returns the length of the string.
     fn current_pos(&self) -> usize {
         self.current_char.map(|(i, _)| i).unwrap_or(self.input.len())
     }
 
-    /// Checks if the remaining input starts with a specific prefix.
     fn starts_with(&self, prefix: &str) -> bool {
         self.input[self.current_pos()..].starts_with(prefix)
     }
 
-    /// Parses and returns the next token from the input stream.
     pub fn next_token(&mut self) -> Option<Token> {
         let (start, c) = self.current_char?;
 
-        // 1. Newlines
         if c == '\n' || c == '\r' {
             return Some(self.lex_newline(start));
         }
-
-        // 2. Whitespace
         if c.is_whitespace() {
             return Some(self.lex_whitespace(start));
         }
 
-        // 3. Code Blocks and Inline Code
         if c == '`' {
             if self.starts_with("```") {
                 return Some(self.lex_code_block(start));
@@ -113,31 +104,33 @@ impl<'a> Lexer<'a> {
             }
         }
 
-        // 4. Brackets
         if "()[]{}<>".contains(c) {
             self.advance();
             return Some(self.create_token(TokenKind::Bracket, start, self.current_pos(), TokenFlags::NONE));
         }
 
-        // 5. Punctuation
         if ".,;:!?".contains(c) {
             self.advance();
             return Some(self.create_token(TokenKind::Punctuation, start, self.current_pos(), TokenFlags::NONE));
         }
 
-        // 6. Operators
+        if c == '/' {
+            if self.starts_with("//") {
+                return Some(self.lex_line_comment(start));
+            } else if self.starts_with("/*") {
+                return Some(self.lex_block_comment(start));
+            }
+        }
+
         if "+-*/=~|&^%\\".contains(c) {
             self.advance();
             return Some(self.create_token(TokenKind::Operator, start, self.current_pos(), TokenFlags::NONE));
         }
 
-        // 7. Strings (Double and Single Quotes)
-        // A `'` right after an alphanumeric char is almost always a
-        // contraction or possessive ("don't", "it's", "James'") rather than
-        // the start of a char/string literal — treat it as punctuation.
         if c == '"' {
             return Some(self.lex_string(start, c));
         }
+
         if c == '\'' {
             let prev_is_alnum = self.prev_char.map_or(false, |pc| pc.is_alphanumeric());
             if prev_is_alnum {
@@ -147,21 +140,17 @@ impl<'a> Lexer<'a> {
             return Some(self.lex_string(start, c));
         }
 
-        // 8. Numbers
         if c.is_ascii_digit() {
             return Some(self.lex_number(start));
         }
 
-        // 9. URLs and Words
         if c.is_alphabetic() || c == '_' {
-            // Quick lookahead for URLs
             if self.starts_with("http://") || self.starts_with("https://") {
                 return Some(self.lex_url(start));
             }
             return Some(self.lex_word(start));
         }
 
-        // 10. Fallback for Unknown characters (e.g. emojis, unusual symbols)
         self.advance();
         Some(self.create_token(TokenKind::Unknown, start, self.current_pos(), TokenFlags::NONE))
     }
@@ -189,34 +178,39 @@ impl<'a> Lexer<'a> {
     }
 
     fn lex_code_block(&mut self, start: usize) -> Token {
-        // Consume the starting ```
         for _ in 0..3 { self.advance(); }
-
-        while let Some(c) = self.peek_char() {
-            if self.starts_with("```") {
-                // Consume the ending ```
-                for _ in 0..3 { self.advance(); }
-                break;
-            }
-            self.advance();
-        }
         self.create_token(TokenKind::CodeBlock, start, self.current_pos(), TokenFlags::NONE)
     }
 
     fn lex_inline_code(&mut self, start: usize) -> Token {
-        self.advance(); // consume initial `
-        while let Some(c) = self.peek_char() {
-            if c == '`' {
-                self.advance(); // consume ending `
-                break;
-            }
-            self.advance();
-        }
+        self.advance();
         self.create_token(TokenKind::InlineCode, start, self.current_pos(), TokenFlags::NONE)
     }
 
+    fn lex_line_comment(&mut self, start: usize) -> Token {
+        while let Some(c) = self.peek_char() {
+            if c == '\n' || c == '\r' { break; }
+            self.advance();
+        }
+        self.create_token(TokenKind::Comment, start, self.current_pos(), TokenFlags::NONE)
+    }
+
+    fn lex_block_comment(&mut self, start: usize) -> Token {
+        self.advance(); // consume '/'
+        self.advance(); // consume '*'
+        let mut prev_star = false;
+        while let Some(c) = self.peek_char() {
+            self.advance();
+            if prev_star && c == '/' {
+                break;
+            }
+            prev_star = c == '*';
+        }
+        self.create_token(TokenKind::Comment, start, self.current_pos(), TokenFlags::NONE)
+    }
+
     fn lex_string(&mut self, start: usize, quote_type: char) -> Token {
-        self.advance(); // consume opening quote
+        self.advance();
         let mut escaped = false;
 
         while let Some(c) = self.peek_char() {
@@ -240,7 +234,6 @@ impl<'a> Lexer<'a> {
             if c.is_ascii_digit() {
                 self.advance();
             } else if c == '.' && !has_decimal {
-                // Peek ahead to ensure it's not a method call (e.g., `1.to_string()`)
                 let mut temp_chars = self.chars.clone();
                 if let Some((_, next_c)) = temp_chars.next() {
                     if next_c.is_ascii_digit() {
@@ -249,7 +242,7 @@ impl<'a> Lexer<'a> {
                         continue;
                     }
                 }
-                break; // It's a dot punctuation, not a decimal
+                break;
             } else {
                 break;
             }
@@ -259,7 +252,6 @@ impl<'a> Lexer<'a> {
 
     fn lex_url(&mut self, start: usize) -> Token {
         while let Some(c) = self.peek_char() {
-            // Read until whitespace or common stopping punctuation
             if c.is_whitespace() || "()[]{}<>\"'".contains(c) {
                 break;
             }
@@ -270,14 +262,11 @@ impl<'a> Lexer<'a> {
 
     fn lex_word(&mut self, start: usize) -> Token {
         let mut flags = TokenFlags::NONE;
-
-        // Check capitalization of first char
         if let Some(c) = self.input[start..].chars().next() {
             if c.is_uppercase() {
                 flags.insert(TokenFlags::CAPITALIZED);
             }
         }
-
         let mut all_caps = true;
         let mut has_numbers = false;
 
@@ -305,7 +294,6 @@ impl<'a> Lexer<'a> {
         self.create_token(TokenKind::Word, start, self.current_pos(), flags)
     }
 
-    /// Helper to construct the final Token struct
     fn create_token(&self, kind: TokenKind, start: usize, end: usize, flags: TokenFlags) -> Token {
         Token {
             kind,

@@ -1,10 +1,5 @@
 use crate::lexer::{Lexer, Token, TokenFlags, TokenKind};
 
-/// Reserved words / operators that are strong, language-specific signals of
-/// actual code. Deliberately narrow — this is a *positive* feature, so false
-/// members here are expensive (they inflate prose that merely talks about
-/// code). Prefer symbols and syntax-only tokens (`fn`, `impl`, `=>`) over
-/// words that double as ordinary English ("function", "class").
 const LANG_KEYWORDS: &[&str] = &[
     "fn", "let", "impl", "struct", "trait", "pub", "mod", "mut", "enum",
     "match", "async", "await", "unwrap", "def", "elif", "except", "import",
@@ -12,18 +7,12 @@ const LANG_KEYWORDS: &[&str] = &[
     "println", "printf", "endl", "nullptr", "None", "true", "false",
 ];
 
-/// Words that *talk about* code without being code. These must contribute
-/// zero to the code score, or a sentence like "Here's the function I'm
-/// using" starts to look like a snippet.
 const DOC_WORDS: &[&str] = &[
     "function", "class", "variable", "method", "loop", "code", "error",
     "bug", "issue", "script", "program", "file", "example", "snippet",
     "output", "result", "following",
 ];
 
-/// Common pronouns, contractions and discourse words. These are strong
-/// *negative* evidence — real code essentially never contains them outside
-/// of comments/strings.
 const ENGLISH_STOPWORDS: &[&str] = &[
     "i", "i'm", "i've", "i'll", "i'd", "you", "you're", "you've", "your",
     "yours", "my", "mine", "our", "ours", "we", "we're", "they", "he",
@@ -42,7 +31,7 @@ struct LineFeatures {
     indent_chars: usize,
     total_tokens: usize,
     word_tokens: usize,
-    symbol_tokens: usize, // operator + bracket + punctuation
+    symbol_tokens: usize,
     lang_keyword_hits: usize,
     doc_word_hits: usize,
     stopword_hits: usize,
@@ -51,7 +40,7 @@ struct LineFeatures {
     ends_with_symbol: bool,
     ends_with_question: bool,
     avg_word_len: f32,
-    is_explicit_code: bool, // came from a ``` or ` token already
+    is_explicit_code: bool,
 }
 
 fn is_camel_or_snake(word: &str) -> bool {
@@ -61,7 +50,6 @@ fn is_camel_or_snake(word: &str) -> bool {
     has_underscore || has_inner_upper
 }
 
-/// Positive evidence this line is code. Range is roughly 0..1.
 fn code_score(f: &LineFeatures) -> f32 {
     if f.is_explicit_code {
         return 1.0;
@@ -79,7 +67,6 @@ fn code_score(f: &LineFeatures) -> f32 {
     s.clamp(0.0, 1.0)
 }
 
-/// Positive evidence this line is prose. Also roughly 0..1.
 fn english_score(f: &LineFeatures) -> f32 {
     let words = f.word_tokens.max(1) as f32;
 
@@ -91,8 +78,6 @@ fn english_score(f: &LineFeatures) -> f32 {
     s.clamp(0.0, 1.0)
 }
 
-/// The single per-line signal the grouper consumes: code evidence net of
-/// english evidence, not just an accumulation of positives.
 fn line_score(f: &LineFeatures) -> f32 {
     if f.is_blank {
         return f32::NAN;
@@ -182,8 +167,6 @@ fn extract_line_features(input: &str, tokens: &[Token]) -> Vec<LineFeatures> {
             TokenKind::Operator | TokenKind::Bracket | TokenKind::Punctuation
         );
         if tok.kind == TokenKind::Punctuation && tok.text != "?" {
-            // a trailing '?' already means "question", don't also count as
-            // a generic "ends with symbol" code signal
             lf.ends_with_symbol = tok.text != "?";
         }
     }
@@ -191,10 +174,6 @@ fn extract_line_features(input: &str, tokens: &[Token]) -> Vec<LineFeatures> {
     lines
 }
 
-/// Smooth line scores with immediate neighbors so a single isolated line
-/// (e.g. just `{` or just `if (...)`) doesn't get judged alone. Blank
-/// neighbors don't drag the average down — they're treated as "agrees with
-/// the current line" rather than as evidence either way.
 fn windowed_scores(raw: &[f32]) -> Vec<f32> {
     let n = raw.len();
     let mut out = vec![f32::NAN; n];
@@ -214,15 +193,14 @@ pub struct CodeBlock {
     pub start: usize,
     pub end: usize,
     pub score: f32,
-    /// The prose line immediately before the block, if any (e.g. "Here's
-    /// the loader function"). Kept as context, never merged into the block
-    /// itself or counted toward its byte range.
     pub context: Option<String>,
 }
 
+/// The Document now acts as the single source of truth for tokens.
 pub struct Document {
-    original: String,
-    blocks: Vec<CodeBlock>,
+    pub original: String,
+    pub tokens: Vec<Token>,
+    pub blocks: Vec<CodeBlock>,
 }
 
 const ENTER_THRESHOLD: f32 = 0.55;
@@ -237,9 +215,6 @@ enum ParserState {
     CandidateEnglish,
 }
 
-/// Look backward from `block_start_line` (skipping blank lines, capped at a
-/// few lines) for a prose sentence to attach as context — e.g. "Here's the
-/// loader function" sitting just above the code it introduces.
 fn find_context(
     input: &str,
     lines: &[LineFeatures],
@@ -264,6 +239,7 @@ fn find_context(
 
 impl Document {
     pub fn analyze(input: &str) -> Self {
+        // We now only lex exactly once.
         let tokens = Lexer::new(input).lex_all();
         let lines = extract_line_features(input, &tokens);
         let raw: Vec<f32> = lines.iter().map(line_score).collect();
@@ -296,8 +272,6 @@ impl Document {
                 }
                 ParserState::CandidateCode => {
                     if blank {
-                        // Neutral: don't let a blank line between two real
-                        // code lines break the entry streak.
                     } else if high {
                         streak += 1;
                         score_sum += s;
@@ -306,9 +280,6 @@ impl Document {
                             state = ParserState::Code;
                         }
                     } else {
-                        // Not enough evidence — one stray high-ish line
-                        // (e.g. a line with `unwrap()` in a question) isn't
-                        // a block on its own.
                         state = ParserState::NaturalLanguage;
                     }
                 }
@@ -338,9 +309,6 @@ impl Document {
                             state = ParserState::NaturalLanguage;
                         }
                     } else {
-                        // False alarm — the "low" run was just a blip
-                        // (e.g. a blank line or a comment). Absorb it back
-                        // into the block.
                         state = ParserState::Code;
                         score_sum += s;
                         score_n += 1;
@@ -349,7 +317,6 @@ impl Document {
             }
         }
 
-        // Flush a block still open at EOF.
         match state {
             ParserState::Code => {
                 blocks.push(CodeBlock {
@@ -373,6 +340,7 @@ impl Document {
 
         Document {
             original: input.to_string(),
+            tokens,
             blocks,
         }
     }
@@ -383,44 +351,5 @@ impl Document {
 
     pub fn block_text(&self, i: usize) -> &str {
         &self.original[self.blocks[i].start..self.blocks[i].end]
-    }
-
-    pub fn original(&self) -> &str {
-        &self.original
-    }
-
-    pub fn transform_blocks<F>(&self, mut f: F) -> String
-    where
-        F: FnMut(&str, &CodeBlock) -> String,
-    {
-        let mut out = String::with_capacity(self.original.len());
-        let mut cursor = 0;
-        for block in &self.blocks {
-            out.push_str(&self.original[cursor..block.start]);
-            let block_text = &self.original[block.start..block.end];
-            out.push_str(&f(block_text, block));
-            cursor = block.end;
-        }
-        out.push_str(&self.original[cursor..]);
-        out
-    }
-
-    pub fn reconstruct(&self, replacements: &[String]) -> Result<String, String> {
-        if replacements.len() != self.blocks.len() {
-            return Err(format!(
-                "expected {} replacement(s), got {}",
-                self.blocks.len(),
-                replacements.len()
-            ));
-        }
-        let mut out = String::with_capacity(self.original.len());
-        let mut cursor = 0;
-        for (block, repl) in self.blocks.iter().zip(replacements) {
-            out.push_str(&self.original[cursor..block.start]);
-            out.push_str(repl);
-            cursor = block.end;
-        }
-        out.push_str(&self.original[cursor..]);
-        Ok(out)
     }
 }
