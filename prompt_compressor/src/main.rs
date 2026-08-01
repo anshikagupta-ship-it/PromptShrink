@@ -36,6 +36,7 @@ fn main() {
             eprintln!("Failed to read '{}': {}", cli.input.display(), e);
             process::exit(1);
         });
+    
 
     let normalized =
         prompt_compressor::canonical::canonicalize(&input);

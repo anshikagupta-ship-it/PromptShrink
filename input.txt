@@ -1,93 +1,179 @@
-Hi! I hope you're doing well.
+Hi,
 
-I've been trying to solve this problem for almost two days now, and honestly I'm starting to think I'm looking at it completely the wrong way.
+I hope you're doing well.
 
-I'm working on a Rust application that processes a large number of log files. The overall architecture is actually working exactly as I intended, but there are a few issues that I simply cannot seem to understand.
+Thank you for taking the time to read this request. I really appreciate your help because this has become much larger than I originally expected.
 
-The application scans a directory, reads every file, parses each line, extracts structured information, stores it into memory, performs some analysis, and finally exports a JSON report.
+I'm preparing a quarterly business report for our executive team, and over the last week I've gathered information from multiple departments including Sales, Marketing, Finance, HR, Customer Support, and Engineering.
 
-Everything compiles successfully.
+The problem is that everyone has written their updates in a completely different style.
 
-The problem is that after processing around five thousand files the memory usage starts increasing dramatically until eventually the operating system kills the process.
+Some people wrote paragraphs.
 
-I don't really know whether this is actually a memory leak, whether I'm accidentally cloning data somewhere, whether I'm holding references longer than I should, or whether my data structures are simply inefficient.
+Some people wrote bullet points.
 
-Here's the parser.
+Some people pasted emails.
 
-use std::fs;
+Some people pasted Slack conversations.
 
-pub fn parse(path: &str) -> Result<Vec<String>, std::io::Error> {
-    let data = fs::read_to_string(path)?;
-    Ok(data.lines().map(|s| s.to_string()).collect())
-}
+Some people copied spreadsheets.
 
-Here's how I'm calling it.
+Some people repeated the same information several times.
 
-fn main() {
-    let logs = parse("logs.txt").unwrap();
+Some updates even contradict each other.
 
-    analyze(logs);
-}
+I need help organizing everything into a single executive summary.
 
-The logs look something like this.
+Our company goals this quarter are:
 
-INFO Connected to server
-INFO Download complete
-WARNING Retry attempt 1
-WARNING Retry attempt 2
-ERROR Connection lost
+- Increase customer retention
+- Reduce infrastructure cost
+- Improve onboarding
+- Expand into Europe
+- Improve customer satisfaction
+- Reduce response time
+- Increase deployment reliability
 
-I'm running the application using
+Sales Update
 
-cargo run --release
+Sales closed 412 new enterprise customers this quarter.
 
-The panic looks like this.
+Sales closed 412 new enterprise customers this quarter.
 
-thread 'main' panicked at src/main.rs:42:17:
-called `Result::unwrap()` on an `Err` value
+Sales closed 412 new enterprise customers this quarter.
 
-Backtrace
+Revenue increased by 18%.
 
-0: rust_begin_unwind
-1: core::panicking::panic_fmt
-2: core::result::unwrap_failed
-3: parser::main
+Revenue increased by 18%.
 
-I have already tried all of the following:
+Revenue increased by 18%.
 
-- restarting my computer,
-- rebuilding the project,
-- deleting Cargo.lock,
-- updating every dependency,
-- reinstalling Rust,
-- checking Stack Overflow,
-- reading the Rust book,
-- searching Reddit,
-- asking two friends,
-- adding println! statements literally everywhere,
-- using cargo clean,
-- trying different input files,
-- reducing the file size,
-- changing optimization levels,
-- switching from Vec<String> to Vec<&str>,
-- profiling with perf,
-- profiling with valgrind,
-- profiling with heaptrack.
+Marketing Update
 
-Unfortunately none of those things really helped me understand what's going on.
+Marketing launched four campaigns.
 
-What I'm hoping you can do is:
+Campaign Alpha generated 2.3 million impressions.
 
-- explain exactly why this panic happens,
-- identify every possible memory problem,
-- identify ownership mistakes,
-- explain whether unnecessary cloning is happening,
-- explain whether my parser design is appropriate,
-- recommend better data structures,
-- suggest architectural improvements,
-- preserve the current design as much as possible,
-- avoid rewriting the whole application,
-- explain everything step by step because I'm still learning Rust,
-- and please explain the reasoning behind every recommendation instead of only giving code because I genuinely want to understand what I'm doing wrong.
+Campaign Beta generated 1.1 million impressions.
 
-I would really appreciate any help because I've spent almost an entire weekend on this one problem and I'm starting to feel like I'm just missing something obvious.
+Campaign Gamma generated 950 thousand impressions.
+
+Campaign Delta generated 800 thousand impressions.
+
+The marketing team believes Campaign Alpha should continue next quarter.
+
+The marketing team believes Campaign Alpha should continue next quarter.
+
+Engineering Update
+
+The backend migration completed successfully.
+
+The backend migration completed successfully.
+
+The backend migration completed successfully.
+
+Average API latency dropped from 280 milliseconds to 145 milliseconds.
+
+Average API latency dropped from 280 milliseconds to 145 milliseconds.
+
+Database CPU utilization decreased from 74% to 48%.
+
+Database CPU utilization decreased from 74% to 48%.
+
+Customer Support
+
+Support received 8,423 tickets.
+
+Support resolved 7,918 tickets.
+
+Average response time improved from 11 hours to 4.2 hours.
+
+Average response time improved from 11 hours to 4.2 hours.
+
+Finance
+
+Operating expenses increased by 6%.
+
+Cloud spending decreased by 14%.
+
+Cloud spending decreased by 14%.
+
+Cloud spending decreased by 14%.
+
+Human Resources
+
+27 engineers were hired.
+
+4 employees resigned.
+
+Employee satisfaction increased from 74% to 81%.
+
+Email from CEO
+
+Hi everyone,
+
+Thanks for the great work this quarter.
+
+I know everyone has been working incredibly hard.
+
+I really appreciate all of your effort.
+
+Please make sure the executive summary is concise.
+
+Please avoid unnecessary technical details.
+
+Please focus on business outcomes.
+
+Thanks again.
+
+Slack Conversation
+
+Alice:
+Can someone confirm whether the migration completed successfully?
+
+Bob:
+Yes.
+
+Alice:
+Can someone confirm whether the migration completed successfully?
+
+Bob:
+Yes.
+
+Alice:
+Can someone confirm whether the migration completed successfully?
+
+Bob:
+Yes.
+
+Meeting Notes
+
+The migration completed successfully.
+
+Customer retention remains the highest priority.
+
+Reducing cloud costs remains the second highest priority.
+
+European expansion remains on schedule.
+
+Questions
+
+- Summarize every department.
+- Highlight the biggest risks.
+- Highlight the biggest successes.
+- Explain where costs increased.
+- Explain where costs decreased.
+- Explain customer satisfaction.
+- Explain hiring trends.
+- Explain engineering improvements.
+- Explain whether company goals were achieved.
+
+Please preserve every important fact.
+
+Please don't omit important business metrics.
+
+Please don't rewrite the report into a different format unless necessary.
+
+Thank you very much.
+
+Have a wonderful day.
