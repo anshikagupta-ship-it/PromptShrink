@@ -46,9 +46,9 @@ export default function AssistantMessage({
             </div>
           ) : result ? (
             <>
-              {/* Primary LLM Response */}
+              {/* Primary LLM Response — Show CLI compressed prompt output */}
               <div className="text-sm text-[#f5f5f5] font-sans leading-relaxed whitespace-pre-line">
-                {result.generatedAnswer}
+                {result.compressedPrompt || result.generatedAnswer}
               </div>
 
               {/* Secondary Compression Result Card */}

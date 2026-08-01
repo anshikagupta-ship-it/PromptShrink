@@ -139,8 +139,8 @@ export default function Home() {
                   originalTokens: m.original_tokens,
                   compressedTokens: m.compressed_tokens,
                   reductionRatio: m.reduction_ratio,
-                  generatedAnswer: m.content,
                   compressedPrompt: m.content,
+                  generatedAnswer: m.content,
                   accuracyRetention: 98.2,
                 }
               : null,
@@ -230,7 +230,7 @@ export default function Home() {
 
     const updatedAssistantMsg = {
       ...assistantMsg,
-      text: res.generatedAnswer || res.compressedPrompt,
+      text: res.compressedPrompt || res.generatedAnswer,
       isProcessing: false,
       result: res,
     };
