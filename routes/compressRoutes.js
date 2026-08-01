@@ -68,6 +68,9 @@ function runCliCompressorFileBased(promptText) {
         try { if (fs.existsSync(outputFilePath)) fs.unlinkSync(outputFilePath); } catch {}
 
         if (result) {
+          // DEBUG: Log exact CLI JSON output field names so we can map them correctly
+          console.log("[CLI OUTPUT DEBUG] Raw keys:", Object.keys(result));
+          console.log("[CLI OUTPUT DEBUG] Full JSON:", JSON.stringify(result, null, 2));
           resolve(result);
         } else {
           console.warn("CLI compressor file process warning code:", code, stderrData);
