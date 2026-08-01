@@ -3,13 +3,15 @@ import { requireAuth } from "../middleware/authMiddleware.js";
 import { spawn } from "child_process";
 import path from "path";
 import fs from "fs";
+import os from "os";
 
 const router = Router();
 
 /**
- * Spawns the native CLI prompt_compressor binary tool
+ * Spawns the native CLI prompt_compressor binary tool:
+ * Command format: prompt_compressor <input_file.txt> <output_file.json>
  */
-function runCliCompressor(promptText, mode, targetRatio) {
+function runCliCompressorFileBased(promptText) {
   return new Promise((resolve) => {
     const binName = process.platform === "win32" ? "prompt_compressor.exe" : "prompt_compressor";
 
@@ -27,48 +29,61 @@ function runCliCompressor(promptText, mode, targetRatio) {
       return resolve(null);
     }
 
+    const tmpDir = os.tmpdir();
+    const timestamp = Date.now() + "_" + Math.floor(Math.random() * 10000);
+    const inputFilePath = path.join(tmpDir, `cz_input_${timestamp}.txt`);
+    const outputFilePath = path.join(tmpDir, `cz_output_${timestamp}.json`);
+
     try {
-      const child = spawn(exePath, [
-        "--mode",
-        mode || "balanced",
-        "--ratio",
-        String(targetRatio || 70),
-      ]);
+      // 1. Write user prompt to input .txt file
+      fs.writeFileSync(inputFilePath, promptText, "utf8");
 
-      let stdoutData = "";
+      // 2. Spawn CLI tool: prompt_compressor <input_file> <output_file>
+      const child = spawn(exePath, [inputFilePath, outputFilePath]);
+
       let stderrData = "";
-
-      child.stdout.on("data", (chunk) => {
-        stdoutData += chunk.toString();
-      });
-
       child.stderr.on("data", (chunk) => {
         stderrData += chunk.toString();
       });
 
-      child.stdin.write(promptText);
-      child.stdin.end();
-
       child.on("close", (code) => {
-        if (code === 0 && stdoutData.trim()) {
+        let result = null;
+
+        // 3. Read output JSON file if created
+        if (fs.existsSync(outputFilePath)) {
           try {
-            const parsed = JSON.parse(stdoutData);
-            resolve(parsed);
+            const rawContent = fs.readFileSync(outputFilePath, "utf8");
+            result = JSON.parse(rawContent);
           } catch {
-            resolve({ compressedPrompt: stdoutData.trim() });
+            try {
+              const rawContent = fs.readFileSync(outputFilePath, "utf8");
+              result = { compressedPrompt: rawContent.trim() };
+            } catch {}
           }
+        }
+
+        // Cleanup temporary files
+        try { if (fs.existsSync(inputFilePath)) fs.unlinkSync(inputFilePath); } catch {}
+        try { if (fs.existsSync(outputFilePath)) fs.unlinkSync(outputFilePath); } catch {}
+
+        if (result) {
+          resolve(result);
         } else {
-          console.warn("CLI compressor output code:", code, stderrData);
+          console.warn("CLI compressor file process warning code:", code, stderrData);
           resolve(null);
         }
       });
 
       child.on("error", (err) => {
         console.warn("CLI spawn process warning:", err.message);
+        try { if (fs.existsSync(inputFilePath)) fs.unlinkSync(inputFilePath); } catch {}
+        try { if (fs.existsSync(outputFilePath)) fs.unlinkSync(outputFilePath); } catch {}
         resolve(null);
       });
     } catch (err) {
-      console.warn("CLI execution catch:", err.message);
+      console.warn("CLI file handling catch:", err.message);
+      try { if (fs.existsSync(inputFilePath)) fs.unlinkSync(inputFilePath); } catch {}
+      try { if (fs.existsSync(outputFilePath)) fs.unlinkSync(outputFilePath); } catch {}
       resolve(null);
     }
   });
@@ -82,8 +97,8 @@ router.post("/compress", requireAuth, async (req, res) => {
     return res.status(400).json({ error: "Prompt context text is required." });
   }
 
-  // 1. Attempt execution via CLI binary tool spawn
-  const cliOutput = await runCliCompressor(prompt, mode, targetRatio);
+  // 1. Attempt execution via CLI binary tool spawn: prompt_compressor <input.txt> <output.json>
+  const cliOutput = await runCliCompressorFileBased(prompt);
 
   const originalTokens = Math.ceil(prompt.length / 3.8);
   const ratioFloat = targetRatio / 100;
@@ -94,10 +109,13 @@ router.post("/compress", requireAuth, async (req, res) => {
 
   const compressedPrompt =
     cliOutput?.compressedPrompt ||
+    cliOutput?.output ||
     `[COMPRESSED CONTEXT - ${actualRatio}% Reduction]\n` +
     (prompt.split("\n").filter((_, idx) => idx % 2 === 0).join("\n") || prompt.slice(0, Math.floor(prompt.length * 0.3)));
 
-  const generatedAnswer = `### Analysis & Solution
+  const generatedAnswer =
+    cliOutput?.generatedAnswer ||
+    `### Analysis & Solution
 
 Based on compressed context (${tokensSaved} tokens saved, ${actualRatio}% reduction):
 
