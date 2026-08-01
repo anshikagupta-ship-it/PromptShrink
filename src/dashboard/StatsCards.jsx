@@ -34,7 +34,7 @@ export default function StatsCards({ result }) {
     },
     {
       title: "Estimated Cost Saved",
-      value: `${result.reductionRatio}%`,
+      value: `$${result.costSavedEst}`,
       subtext: `~$${result.costSavedEst} per request saved`,
       color: "from-purple-500/20 to-purple-600/10",
       borderColor: "border-purple-500/30",

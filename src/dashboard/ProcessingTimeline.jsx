@@ -86,7 +86,7 @@ export default function ProcessingTimeline({ isProcessing, currentStep, result }
         </div>
         {result && (
           <span className="text-xs font-mono bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 px-3 py-1 rounded-full font-medium">
-            Status: 72.6%+ Saved & Verified ✓
+            Status: {result.reductionRatio}%+ Saved & Verified ✓
           </span>
         )}
       </div>

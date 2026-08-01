@@ -329,7 +329,7 @@ export default function Home() {
           {currentView === "benchmarks" ? (
             <BenchmarkPage onRunPreset={handleRunPresetBenchmark} />
           ) : currentView === "analytics" ? (
-            <AnalyticsPage />
+            <AnalyticsPage history={recentHistory} />
           ) : messages.length === 0 ? (
             /* Empty State */
             <EmptyState onSelectPreset={handleSelectPreset} />
