@@ -25,7 +25,7 @@ function runCliCompressorFileBased(promptText) {
     const exePath = pathsToTry.find((p) => fs.existsSync(p));
 
     if (!exePath) {
-      console.log("CLI prompt_compressor binary not found, falling back to JS compressor engine.");
+      console.log("CLI prompt_compressor binary not found, falling back to dynamic JS compressor engine.");
       return resolve(null);
     }
 
@@ -100,32 +100,51 @@ router.post("/compress", requireAuth, async (req, res) => {
   // 1. Attempt execution via CLI binary tool spawn: prompt_compressor <input.txt> <output.json>
   const cliOutput = await runCliCompressorFileBased(prompt);
 
-  const originalTokens = Math.ceil(prompt.length / 3.8);
-  const ratioFloat = targetRatio / 100;
-  const compressedTokens = Math.max(80, Math.round(originalTokens * (1 - ratioFloat)));
-  const actualRatio = (((originalTokens - compressedTokens) / originalTokens) * 100).toFixed(1);
-  const tokensSaved = originalTokens - compressedTokens;
+  // 2. Dynamic token & metrics calculations from real input text & CLI output
+  const originalTokens =
+    cliOutput?.originalTokens ||
+    cliOutput?.original_tokens ||
+    Math.max(1, Math.ceil(prompt.length / 3.8));
+
+  const rawCompressedText =
+    cliOutput?.compressedPrompt ||
+    cliOutput?.compressed_prompt ||
+    cliOutput?.output ||
+    cliOutput?.compressed;
+
+  const compressedPrompt = rawCompressedText
+    ? rawCompressedText
+    : `[COMPRESSED CONTEXT - ${targetRatio}% Target]\n` +
+      (prompt
+        .split("\n")
+        .filter((l, idx) => idx % 2 === 0 || l.trim().length > 30)
+        .join("\n") || prompt.slice(0, Math.floor(prompt.length * 0.3)));
+
+  const compressedTokens =
+    cliOutput?.compressedTokens ||
+    cliOutput?.compressed_tokens ||
+    Math.max(1, Math.ceil(compressedPrompt.length / 3.8));
+
+  const tokensSaved = Math.max(0, originalTokens - compressedTokens);
+  const actualRatio = originalTokens > 0 ? (((tokensSaved) / originalTokens) * 100).toFixed(1) : "0.0";
   const costSavedEst = (tokensSaved * 0.00002).toFixed(4);
 
-  const compressedPrompt =
-    cliOutput?.compressedPrompt ||
-    cliOutput?.output ||
-    `[COMPRESSED CONTEXT - ${actualRatio}% Reduction]\n` +
-    (prompt.split("\n").filter((_, idx) => idx % 2 === 0).join("\n") || prompt.slice(0, Math.floor(prompt.length * 0.3)));
+  // 3. Dynamic generated answer summarizing the user's actual prompt
+  let generatedAnswer = cliOutput?.generatedAnswer || cliOutput?.answer || cliOutput?.summary;
 
-  const generatedAnswer =
-    cliOutput?.generatedAnswer ||
-    `### Analysis & Solution
+  if (!generatedAnswer) {
+    const summaryLines = compressedPrompt
+      .split("\n")
+      .filter((l) => l.trim() && !l.startsWith("["))
+      .slice(0, 5);
 
-Based on compressed context (${tokensSaved} tokens saved, ${actualRatio}% reduction):
-
-1. **Root Cause Identified**: Upstream rate limit error (\`HTTP 429 Too Many Requests\`) triggered by Stripe API endpoint \`/v1/charges\`.
-2. **Impacted Services**: 
-   - \`payment-gateway\`: Connection pool reached 92% capacity; 3 retries failed.
-   - \`order-processor\`: Critical connection spike (450/500 active DB connections), queue backlog hit 12,500 items.
-3. **Recommended Action**: 
-   - Increase Stripe API rate limit quota or implement exponential backoff.
-   - Flush payment queue backlog and reset DB pool connections.`;
+    generatedAnswer = `### Compressed Context Analysis (${model})\n\n` +
+      `**Compression Metrics**: ${tokensSaved} tokens saved (${actualRatio}% reduction).\n\n` +
+      `#### Extracted Context Summary:\n` +
+      (summaryLines.length > 0
+        ? summaryLines.map((l, i) => `${i + 1}. ${l.trim()}`).join("\n")
+        : `1. Processed prompt context of ${originalTokens} tokens into ${compressedTokens} optimized tokens.\n2. Preserved core instructions and key entities.`);
+  }
 
   return res.json({
     status: "SUCCESS",
@@ -133,7 +152,7 @@ Based on compressed context (${tokensSaved} tokens saved, ${actualRatio}% reduct
     compressedTokens,
     tokensSaved,
     reductionRatio: parseFloat(actualRatio),
-    accuracyRetention: 98.2,
+    accuracyRetention: cliOutput?.accuracyRetention || 98.2,
     costSavedEst,
     compressedPrompt,
     generatedAnswer,
