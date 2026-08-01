@@ -22,9 +22,14 @@ app.use(cookieParser());
 app.use("/api/auth", authRoutes);
 app.use("/api/v1", compressRoutes);
 
-// Health check endpoint
+// Health check endpoint for Render deployment monitoring
 app.get("/api/health", (req, res) => {
   res.json({ status: "OK", service: "ContextZero Backend API", env: config.nodeEnv });
+});
+
+// Root route for Render deployment sanity check
+app.get("/", (req, res) => {
+  res.json({ message: "ContextZero Backend API Service Running Live" });
 });
 
 // Global Error Handler
@@ -33,8 +38,9 @@ app.use((err, req, res, next) => {
   res.status(500).json({ error: "Internal server error" });
 });
 
-// Start Server
-app.listen(config.port, () => {
-  console.log(`ContextZero Backend running on port ${config.port} (${config.nodeEnv})`);
+// Start Server listening on 0.0.0.0 for cloud hosting
+const host = "0.0.0.0";
+app.listen(config.port, host, () => {
+  console.log(`ContextZero Backend running on http://${host}:${config.port} (${config.nodeEnv})`);
   console.log(`Accepting credentials from ${config.frontendUrl}`);
 });
