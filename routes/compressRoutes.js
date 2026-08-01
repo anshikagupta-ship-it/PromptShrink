@@ -114,8 +114,7 @@ router.post("/compress", requireAuth, async (req, res) => {
 
   const compressedPrompt = rawCompressedText
     ? rawCompressedText
-    : `[COMPRESSED CONTEXT - ${targetRatio}% Target]\n` +
-      (prompt
+    : (prompt
         .split("\n")
         .filter((l, idx) => idx % 2 === 0 || l.trim().length > 30)
         .join("\n") || prompt.slice(0, Math.floor(prompt.length * 0.4)));
@@ -129,15 +128,13 @@ router.post("/compress", requireAuth, async (req, res) => {
   const actualRatio = originalTokens > 0 ? (((tokensSaved) / originalTokens) * 100).toFixed(1) : "0.0";
   const costSavedEst = (tokensSaved * 0.00002).toFixed(4);
 
-  // 3. Dynamic generated answer summarizing the user's actual prompt cleanly without line number prefixes
-  let generatedAnswer = cliOutput?.generatedAnswer || cliOutput?.answer || cliOutput?.summary;
-
-  if (!generatedAnswer) {
-    generatedAnswer = `### Dynamic Compressed Output (${model})\n\n` +
-      `**Context Compression Metrics**: ${tokensSaved} tokens saved (${actualRatio}% reduction).\n\n` +
-      `#### Optimized Prompt Context:\n` +
-      compressedPrompt;
-  }
+  // 3. Generated answer outputs ONLY pure generated CLI text without headers
+  const generatedAnswer =
+    cliOutput?.generatedAnswer ||
+    cliOutput?.generated_answer ||
+    cliOutput?.answer ||
+    cliOutput?.summary ||
+    compressedPrompt;
 
   return res.json({
     status: "SUCCESS",
