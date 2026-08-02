@@ -205,18 +205,168 @@ Happy to help.`,
     title: "Verbose API Documentation",
     description: "Extensive API specs with repeated boilerplate parameters and headers",
     task: "List all required authentication headers and error response formats.",
-    context: `API Specification - Service V2 Gateway
-General Requirements: All requests must include Bearer token authorization in the HTTP Header format: 'Authorization: Bearer <TOKEN>'.
-Content-Type header must be strictly set to 'application/json'.
-Rate Limiting: Each tenant is capped at 1,000 requests per minute per IP address.
-Error Responses:
-- 400 Bad Request: Returns JSON object {"error": "INVALID_PAYLOAD", "details": string}.
-- 401 Unauthorized: Returns JSON object {"error": "MISSING_BEARER_TOKEN", "code": 401}.
-- 429 Too Many Requests: Returns JSON object {"error": "RATE_LIMIT_EXCEEDED", "retry_after_sec": integer}.
-- 500 Internal Error: Returns JSON object {"error": "INTERNAL_SERVER_ERROR", "trace_id": string}.
-Endpoint /api/v2/users: Requires 'Authorization: Bearer <TOKEN>' and 'Content-Type: application/json'.
-Endpoint /api/v2/projects: Requires 'Authorization: Bearer <TOKEN>' and 'Content-Type: application/json'.
-Endpoint /api/v2/billing: Requires 'Authorization: Bearer <TOKEN>' and 'Content-Type: application/json'.`,
+    context: `I'm building a production-ready URL Shortener similar to Bit.ly. Please design the complete backend architecture in detail.
+
+Start by explaining the overall architecture at a high level before diving into each component individually. I don't want just a diagram. I want a detailed explanation of every decision you make, why you recommend it, and what alternatives exist.
+
+Please explain each technology before recommending it. Don't assume I know anything about it.
+
+The backend should be built using FastAPI, PostgreSQL, Redis, Docker, Kubernetes, Nginx, and AWS.
+
+Please explain why FastAPI is chosen over Flask and Django. Compare their strengths, weaknesses, scalability, community support, performance, and learning curve.
+
+Please explain why PostgreSQL is preferred over MySQL and MongoDB for this application. Include advantages, disadvantages, and tradeoffs.
+
+Please explain why Redis is needed. Explain caching, session storage, rate limiting, distributed locking, and why Redis is commonly used for these tasks.
+
+The application should support:
+
+- User authentication
+- Google OAuth
+- GitHub OAuth
+- JWT Authentication
+- URL shortening
+- Custom aliases
+- Analytics
+- QR Code generation
+- Link expiration
+- Password protected links
+- Organizations
+- Team workspaces
+- Public APIs
+- Admin dashboard
+
+Please explain every feature individually before discussing implementation.
+
+For every database table, explain why it exists before showing the schema.
+
+Please provide SQL schema examples.
+
+Please provide API endpoint examples.
+
+Please provide request examples.
+
+Please provide response examples.
+
+Please provide error response examples.
+
+Please provide authentication examples.
+
+Please provide folder structure.
+
+Please explain every folder individually.
+
+Please explain every major class individually.
+
+Please explain every API endpoint individually.
+
+Please explain every middleware individually.
+
+Please explain every service individually.
+
+Please explain every repository individually.
+
+Please explain every utility individually.
+
+Please explain every model individually.
+
+Please explain every dependency individually.
+
+Please include detailed diagrams wherever appropriate.
+
+Please include Mermaid diagrams wherever appropriate.
+
+Please include sequence diagrams wherever appropriate.
+
+Please include architecture diagrams wherever appropriate.
+
+Please include deployment diagrams wherever appropriate.
+
+Please compare horizontal scaling and vertical scaling.
+
+Please compare synchronous communication and asynchronous communication.
+
+Please compare REST APIs and gRPC.
+
+Please compare polling, WebSockets, and Server-Sent Events.
+
+Please compare RabbitMQ, Kafka, and Redis Streams.
+
+Please compare Docker Compose and Kubernetes.
+
+Please explain monitoring.
+
+Please explain logging.
+
+Please explain tracing.
+
+Please explain metrics.
+
+Please explain observability.
+
+Please explain CI/CD.
+
+Please explain testing.
+
+Please explain integration testing.
+
+Please explain unit testing.
+
+Please explain end-to-end testing.
+
+Please explain security.
+
+Please explain HTTPS.
+
+Please explain CORS.
+
+Please explain CSRF.
+
+Please explain SQL Injection.
+
+Please explain XSS.
+
+Please explain rate limiting.
+
+Please explain authentication security.
+
+Please explain authorization security.
+
+Please explain deployment.
+
+Please explain blue-green deployment.
+
+Please explain rolling deployment.
+
+Please explain canary deployment.
+
+Please explain disaster recovery.
+
+Please explain backup strategy.
+
+Please explain database replication.
+
+Please explain sharding.
+
+Please explain partitioning.
+
+Please explain indexing.
+
+Please explain optimization.
+
+Please explain query optimization.
+
+Please explain caching optimization.
+
+Please explain API optimization.
+
+Please explain cost optimization.
+
+Please explain scalability.
+
+Please explain performance optimization.
+
+Finally, provide a complete implementation roadmap from MVP (100 users) to enterprise scale (100 million users). Explain every phase individually, explain why the order matters, discuss tradeoffs, recommend best practices, mention common mistakes, and summarize the entire design at the end.`,
   }
 ];
 
