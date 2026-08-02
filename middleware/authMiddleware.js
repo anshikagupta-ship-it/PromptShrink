@@ -29,3 +29,24 @@ export async function requireAuth(req, res, next) {
     return res.status(500).json({ error: "Internal authentication error." });
   }
 }
+
+export async function optionalAuth(req, res, next) {
+  try {
+    const sessionId = req.cookies?.contextzero_session;
+
+    if (sessionId) {
+      const session = await SessionModel.findSessionById(sessionId);
+      if (session) {
+        const user = await UserModel.findUserById(session.userId);
+        if (user) {
+          req.user = user;
+          req.sessionId = sessionId;
+        }
+      }
+    }
+    next();
+  } catch (error) {
+    console.warn("Optional Auth Warning:", error.message);
+    next();
+  }
+}
