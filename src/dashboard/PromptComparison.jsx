@@ -73,8 +73,8 @@ export default function PromptComparison({ result, originalPrompt }) {
                 </span>
                 <span className="text-xs text-gray-400">Processed from compressed context payload</span>
               </div>
-              <div className="flex items-center gap-2 text-xs text-emerald-400 font-mono font-medium">
-                <span>Accuracy Score: 98.2% Retention ✓</span>
+              <div className="flex items-center gap-2 text-xs text-[#a3a3a3] font-mono font-medium">
+                <span>Accuracy Retention: Coming Soon</span>
               </div>
             </div>
 
