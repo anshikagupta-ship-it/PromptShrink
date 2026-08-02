@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { optionalAuth } from "../middleware/authMiddleware.js";
+import { optionalAuth, requireAuth } from "../middleware/authMiddleware.js";
 import { spawn } from "child_process";
 import path from "path";
 import fs from "fs";
@@ -127,7 +127,7 @@ function cleanupTempFiles(inFile, outFile) {
 }
 
 // POST /api/v1/compress
-router.post("/compress", requireAuth, async (req, res) => {
+router.post("/compress", optionalAuth, async (req, res) => {
   const { prompt, model = "cO-1.0", mode = "balanced", targetRatio = 70 } = req.body;
 
   if (!prompt || !prompt.trim()) {
