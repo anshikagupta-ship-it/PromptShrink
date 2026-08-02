@@ -9,12 +9,16 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey);
  * Fetch all user conversations along with their messages from Supabase PostgreSQL DB
  */
 export async function getUserConversations(userId) {
+  if (!userId) {
+    console.warn("[Supabase] getUserConversations called without userId, returning empty array.");
+    return [];
+  }
   try {
-    let query = supabase.from("conversations").select("*, messages(*)");
-    if (userId) {
-      query = query.eq("user_id", userId);
-    }
-    const { data, error } = await query.order("created_at", { ascending: false });
+    const { data, error } = await supabase
+      .from("conversations")
+      .select("*, messages(*)")
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false });
 
     if (error) {
       console.warn("[Supabase] Fetch conversations notice:", error.message);
