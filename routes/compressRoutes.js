@@ -49,7 +49,9 @@ function runCliCompressor(promptText) {
     }
 
     console.log(`[DEBUG CLI] Spawning command: ${pythonExe} "${scriptPath}" --memory-limit-mb 256 "${inputFile}" "${outputFile}"`);
-    const child = spawn(pythonExe, [scriptPath, "--memory-limit-mb", "256", inputFile, outputFile]);
+    const child = spawn(pythonExe, [scriptPath, "--memory-limit-mb", "256", inputFile, outputFile], {
+      env: { ...process.env, PYTHONPATH: path.join(process.cwd(), "python_modules") }
+    });
 
     let stderr = "";
     let stdout = "";
