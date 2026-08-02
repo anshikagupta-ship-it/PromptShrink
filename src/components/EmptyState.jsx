@@ -38,12 +38,12 @@ export default function EmptyState({ onSelectPreset }) {
       </p>
 
       {/* 3 Compact Suggestion Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 w-full mb-8">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 sm:gap-3 w-full mb-6 sm:mb-8">
         {suggestions.map((item, idx) => (
           <button
             key={idx}
             onClick={() => onSelectPreset(item.sample)}
-            className="p-4 rounded-2xl bg-[#1a1a1a] hover:bg-[#262626] border border-white/[0.07] text-left transition flex flex-col justify-between h-28 group cursor-pointer"
+            className="p-3.5 sm:p-4 rounded-2xl bg-[#1a1a1a] hover:bg-[#262626] border border-white/[0.07] text-left transition flex flex-col justify-between h-auto min-h-[85px] sm:h-28 group cursor-pointer"
           >
             <div>
               <div className="text-xs font-semibold text-[#f5f5f5] group-hover:text-white transition mb-1">

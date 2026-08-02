@@ -41,22 +41,22 @@ export default function CompressionInspector({ isOpen, onClose, data }) {
           </div>
 
           {/* Top Metrics Grid */}
-          <div className="grid grid-cols-4 gap-2 bg-[#17171A] border border-white/[0.08] p-3 rounded-lg text-xs font-mono">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 bg-[#17171A] border border-white/[0.08] p-2.5 sm:p-3 rounded-lg text-xs font-mono">
             <div>
-              <div className="text-[11px] text-[#71717A]">Original</div>
-              <div className="text-[#F5F5F5] font-medium mt-0.5">{result.originalTokens.toLocaleString()}</div>
+              <div className="text-[10px] sm:text-[11px] text-[#71717A]">Original</div>
+              <div className="text-[#F5F5F5] font-medium mt-0.5 text-xs sm:text-sm">{result.originalTokens.toLocaleString()}</div>
             </div>
             <div>
-              <div className="text-[11px] text-[#71717A]">Compressed</div>
-              <div className="text-[#F5F5F5] font-medium mt-0.5">{result.compressedTokens.toLocaleString()}</div>
+              <div className="text-[10px] sm:text-[11px] text-[#71717A]">Compressed</div>
+              <div className="text-[#F5F5F5] font-medium mt-0.5 text-xs sm:text-sm">{result.compressedTokens.toLocaleString()}</div>
             </div>
             <div>
-              <div className="text-[11px] text-[#71717A]">Reduction</div>
-              <div className="text-[#10B981] font-medium mt-0.5">{result.reductionRatio}% ✓</div>
+              <div className="text-[10px] sm:text-[11px] text-[#71717A]">Reduction</div>
+              <div className="text-[#10B981] font-medium mt-0.5 text-xs sm:text-sm">{result.reductionRatio}% ✓</div>
             </div>
             <div>
-              <div className="text-[11px] text-[#71717A]">Preservation</div>
-              <div className="text-indigo-400 font-medium mt-0.5">{result.accuracyRetention}% ✓</div>
+              <div className="text-[10px] sm:text-[11px] text-[#71717A]">Preservation</div>
+              <div className="text-indigo-400 font-medium mt-0.5 text-xs sm:text-sm">{result.accuracyRetention}% ✓</div>
             </div>
           </div>
 

@@ -24,30 +24,30 @@ export default function CompressionResult({ result, onInspect }) {
         </span>
       </div>
 
-      {/* 4 Metric Columns */}
-      <div className="grid grid-cols-4 gap-3 py-1">
-        <div>
+      {/* 4 Metric Columns (2x2 on mobile, 1x4 on desktop) */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3 py-1">
+        <div className="bg-[#1f1f1f]/50 p-2 sm:p-0 rounded-lg sm:bg-transparent border border-white/[0.04] sm:border-none">
           <div className="font-mono font-medium text-[#f5f5f5] text-sm">
             {result.originalTokens.toLocaleString()}
           </div>
           <div className="text-[11px] text-[#737373] mt-0.5">Before</div>
         </div>
 
-        <div>
+        <div className="bg-[#1f1f1f]/50 p-2 sm:p-0 rounded-lg sm:bg-transparent border border-white/[0.04] sm:border-none">
           <div className="font-mono font-medium text-[#f5f5f5] text-sm">
             {result.compressedTokens.toLocaleString()}
           </div>
           <div className="text-[11px] text-[#737373] mt-0.5">After</div>
         </div>
 
-        <div>
+        <div className="bg-[#1f1f1f]/50 p-2 sm:p-0 rounded-lg sm:bg-transparent border border-white/[0.04] sm:border-none">
           <div className="font-mono font-medium text-[#10B981] text-sm">
             {result.reductionRatio}%
           </div>
           <div className="text-[11px] text-[#737373] mt-0.5">Saved</div>
         </div>
 
-        <div>
+        <div className="bg-[#1f1f1f]/50 p-2 sm:p-0 rounded-lg sm:bg-transparent border border-white/[0.04] sm:border-none">
           <div className="font-mono font-medium text-[#f5f5f5] text-sm">
             {result.accuracyRetention}%
           </div>
@@ -56,7 +56,7 @@ export default function CompressionResult({ result, onInspect }) {
       </div>
 
       {/* Action Buttons: Inspect & Copy Response */}
-      <div className="pt-1 flex items-center gap-2">
+      <div className="pt-1 flex flex-wrap items-center gap-2">
         <button
           type="button"
           onClick={onInspect}

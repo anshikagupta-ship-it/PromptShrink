@@ -15,8 +15,8 @@ export default function DashboardPanel({ latestResult, isOpen, onClose }) {
 
   return (
     <aside
-      className={`fixed lg:static inset-y-0 right-0 z-30 bg-[#121212] border-l border-white/[0.07] flex flex-col justify-between transition-all duration-300 ease-in-out shrink-0 overflow-hidden ${
-        isOpen ? "w-[300px] opacity-100 translate-x-0" : "w-0 lg:w-0 opacity-0 translate-x-full border-none"
+      className={`fixed lg:static inset-y-0 right-0 z-40 bg-[#121212] border-l border-white/[0.07] flex flex-col justify-between transition-all duration-300 ease-in-out shrink-0 overflow-hidden ${
+        isOpen ? "w-[300px] max-w-[85vw] opacity-100 translate-x-0" : "w-0 lg:w-0 opacity-0 translate-x-full border-none"
       }`}
     >
       {/* Panel Header */}

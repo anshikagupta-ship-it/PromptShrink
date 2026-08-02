@@ -380,6 +380,14 @@ export default function Home() {
         />
       )}
 
+      {/* Mobile backdrop - tap outside to close optimization dashboard */}
+      {isDashboardOpen && (
+        <div
+          className="fixed inset-0 z-20 bg-black/60 lg:hidden"
+          onClick={() => setIsDashboardOpen(false)}
+        />
+      )}
+
       {/* LEFT COLUMN: Sidebar (250px) - Chat History & Nav */}
       <Sidebar
         currentView={currentView}

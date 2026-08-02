@@ -8,8 +8,8 @@ export default function AssistantMessage({
   const { text, result, isProcessing } = message;
 
   return (
-    <div className="py-5 px-4 max-w-3xl mx-auto animate-fade-in">
-      <div className="flex gap-3.5 items-start">
+    <div className="py-3.5 sm:py-5 px-3 sm:px-4 max-w-3xl mx-auto animate-fade-in">
+      <div className="flex gap-2.5 sm:gap-3.5 items-start">
         {/* Assistant Avatar: Clean Neutral Badge */}
         <div className="w-6 h-6 rounded-md bg-[#262626] border border-white/10 flex items-center justify-center font-semibold text-white text-xs shrink-0 mt-0.5 shadow-xs">
           CZ
@@ -47,7 +47,7 @@ export default function AssistantMessage({
           ) : result ? (
             <>
               {/* Primary LLM Response — Show CLI compressed prompt output */}
-              <div className="text-sm text-[#f5f5f5] font-sans leading-relaxed whitespace-pre-line">
+              <div className="text-xs sm:text-sm text-[#f5f5f5] font-sans leading-relaxed whitespace-pre-line break-words">
                 {result.compressedPrompt || result.generatedAnswer}
               </div>
 

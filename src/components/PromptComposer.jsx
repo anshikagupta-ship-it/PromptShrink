@@ -29,9 +29,9 @@ export default function PromptComposer({ prompt, setPrompt, onSend, isLoading })
   };
 
   return (
-    <div className="p-4 sticky bottom-0 z-20 bg-gradient-to-t from-[#0a0a0a] via-[#0a0a0a]/90 to-transparent font-sans">
+    <div className="p-2.5 sm:p-4 sticky bottom-0 z-20 bg-gradient-to-t from-[#0a0a0a] via-[#0a0a0a]/90 to-transparent font-sans">
       <div className="max-w-3xl mx-auto">
-        <div className="bg-[#1a1a1a] border border-white/[0.08] rounded-[24px] p-3 shadow-lg focus-within:border-white/20 transition relative">
+        <div className="bg-[#1a1a1a] border border-white/[0.08] rounded-[20px] sm:rounded-[24px] p-2.5 sm:p-3 shadow-lg focus-within:border-white/20 transition relative">
           <input
             type="file"
             ref={fileInputRef}
@@ -46,7 +46,7 @@ export default function PromptComposer({ prompt, setPrompt, onSend, isLoading })
             onChange={(e) => setPrompt(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder="Ask anything or paste long context..."
-            className="w-full bg-transparent text-[#f5f5f5] text-sm placeholder-[#737373] focus:outline-none resize-none leading-relaxed px-2 font-normal"
+            className="w-full bg-transparent text-[#f5f5f5] text-xs sm:text-sm placeholder-[#737373] focus:outline-none resize-none leading-relaxed px-1 sm:px-2 font-normal"
           />
 
           {/* Bottom Row */}
@@ -55,17 +55,17 @@ export default function PromptComposer({ prompt, setPrompt, onSend, isLoading })
             <button
               type="button"
               onClick={() => fileInputRef.current?.click()}
-              className="text-xs text-[#a3a3a3] hover:text-[#f5f5f5] flex items-center gap-1.5 px-2 py-1 rounded-md hover:bg-[#262626] transition font-medium"
+              className="text-[11px] sm:text-xs text-[#a3a3a3] hover:text-[#f5f5f5] flex items-center gap-1.5 px-2 py-1 rounded-md hover:bg-[#262626] transition font-medium"
             >
-              <svg className="w-4 h-4 text-[#737373]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-[#737373]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
               </svg>
               <span>Attach Log</span>
             </button>
 
             {/* Right: Token Counter & Send Arrow Button */}
-            <div className="flex items-center gap-3">
-              <span className="text-xs font-mono text-[#737373]">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <span className="text-[10px] sm:text-xs font-mono text-[#737373]">
                 {tokenCount.toLocaleString()} tokens
               </span>
 
