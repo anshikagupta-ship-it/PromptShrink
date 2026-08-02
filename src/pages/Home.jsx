@@ -67,7 +67,8 @@ export default function Home() {
   // Sync conversations from Supabase on mount / user change
   useEffect(() => {
     async function loadDbConversations() {
-      const dbConvos = await getUserConversations(user?.id);
+      const accountKey = user?.email || user?.id;
+      const dbConvos = await getUserConversations(accountKey);
       if (dbConvos && dbConvos.length > 0) {
         setRecentHistory((prev) => {
           return dbConvos.map((dbc) => {
@@ -265,8 +266,9 @@ export default function Home() {
     if (!activeConvoId) {
       // First turn in a new chat session -> Create new conversation thread in DB
       const newTitle = textToSend.slice(0, 30) + "...";
+      const accountKey = user?.email || user?.id;
       const savedConvo = await saveConversationThread({
-        userId: user?.id,
+        userId: accountKey,
         title: newTitle,
         model,
         targetRatio,
