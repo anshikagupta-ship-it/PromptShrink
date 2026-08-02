@@ -47,8 +47,8 @@ export default function Home() {
   const [isLoading, setIsLoading] = useState(false);
   const [activeConvoId, setActiveConvoId] = useState(null);
 
-  // Compute user-scoped cache key using user.email (unique per Google account)
-  const accountKey = user?.email || user?.id;
+  // Compute user-scoped cache key using user.id UUID (matching users.id in Supabase)
+  const accountKey = user?.id;
   const cacheKey = accountKey ? `cz_recent_history_${accountKey}` : "cz_recent_history_guest";
 
   // Initialize recentHistory from user-scoped localStorage cache
@@ -91,7 +91,7 @@ export default function Home() {
     setMessages([]);
     setLatestResult(null);
 
-    const currentAccountKey = user?.email || user?.id;
+    const currentAccountKey = user?.id;
     if (!currentAccountKey) {
       // Guest mode -> load guest cache or empty
       try {
@@ -318,8 +318,8 @@ export default function Home() {
     if (!activeConvoId) {
       // First turn in a new chat session -> Create new conversation thread in DB
       const newTitle = textToSend.slice(0, 30) + "...";
-      const currentAccountKey = user?.email || user?.id;
-      console.log("[Home] Saving new conversation. user.email/id:", currentAccountKey);
+      const currentAccountKey = user?.id;
+      console.log("[Home] Saving new conversation. user.id UUID:", currentAccountKey);
       const savedConvo = await saveConversationThread({
         userId: currentAccountKey,
         title: newTitle,
