@@ -13,25 +13,20 @@ const router = Router();
  */
 function runCliCompressor(promptText) {
   return new Promise((resolve) => {
-    const binName = process.platform === "win32" ? "prompt_compressor.exe" : "prompt_compressor";
+    // Instead of hardcoding the interpreter, use an environment variable.
+    const pythonExe = process.env.PYTHON_EXECUTABLE || (process.platform === "win32" ? "python" : "python3");
 
-    const pathsToTry = [
-      path.join(process.cwd(), "compresser", binName),
-      path.join(process.cwd(), binName),
-      path.join(process.cwd(), "compresser", "prompt_compressor"),
-      path.join(process.cwd(), "prompt_compressor", "target", "release", binName),
-      path.join(process.cwd(), "prompt_compressor", "target", "release", "prompt_compressor"),
-    ];
+    // The script path is relative to the project root
+    const scriptPath = path.join(process.cwd(), "compressor", "prompt_compressor_py", "main.py");
 
-    console.log("[DEBUG CLI] Current Working Directory:", process.cwd());
-    const exePath = pathsToTry.find((p) => fs.existsSync(p));
-
-    if (!exePath) {
-      console.warn(`[CLI WARN] Binary "${binName}" not found. Using JS compression engine.`);
+    console.log(`[DEBUG CLI] Current Working Directory: ${process.cwd()}`);
+    
+    if (!fs.existsSync(scriptPath)) {
+      console.warn(`[CLI WARN] Script "${scriptPath}" not found. Using JS compression engine.`);
       return resolve(null);
     }
 
-    console.log(`[DEBUG CLI] Found executable at: ${exePath}`);
+    console.log(`[DEBUG CLI] Found python script at: ${scriptPath}`);
 
     const tmpDir = os.tmpdir();
     const stamp = `${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
@@ -46,8 +41,8 @@ function runCliCompressor(promptText) {
       return resolve(null);
     }
 
-    console.log(`[DEBUG CLI] Spawning command: ${exePath} "${inputFile}" "${outputFile}"`);
-    const child = spawn(exePath, [inputFile, outputFile]);
+    console.log(`[DEBUG CLI] Spawning command: ${pythonExe} "${scriptPath}" "${inputFile}" "${outputFile}"`);
+    const child = spawn(pythonExe, [scriptPath, inputFile, outputFile]);
 
     let stderr = "";
     let stdout = "";

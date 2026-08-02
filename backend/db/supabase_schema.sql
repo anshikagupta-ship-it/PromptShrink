@@ -38,11 +38,12 @@ DROP POLICY IF EXISTS "Users can delete their own conversations" ON public.conve
 DROP POLICY IF EXISTS "Users can view messages in their conversations" ON public.messages;
 DROP POLICY IF EXISTS "Users can insert messages in their conversations" ON public.messages;
 
--- Enable Permissive Policies for seamless persistence across sessions
-CREATE POLICY "Allow public select conversations" ON public.conversations FOR SELECT USING (true);
-CREATE POLICY "Allow public insert conversations" ON public.conversations FOR INSERT WITH CHECK (true);
-CREATE POLICY "Allow public update conversations" ON public.conversations FOR UPDATE USING (true);
-CREATE POLICY "Allow public delete conversations" ON public.conversations FOR DELETE USING (true);
+-- Force all access to go through the backend API which validates user ownership.
+-- We drop these public policies so anonymous users cannot access chat histories.
+DROP POLICY IF EXISTS "Allow public select conversations" ON public.conversations;
+DROP POLICY IF EXISTS "Allow public insert conversations" ON public.conversations;
+DROP POLICY IF EXISTS "Allow public update conversations" ON public.conversations;
+DROP POLICY IF EXISTS "Allow public delete conversations" ON public.conversations;
 
-CREATE POLICY "Allow public select messages" ON public.messages FOR SELECT USING (true);
-CREATE POLICY "Allow public insert messages" ON public.messages FOR INSERT WITH CHECK (true);
+DROP POLICY IF EXISTS "Allow public select messages" ON public.messages;
+DROP POLICY IF EXISTS "Allow public insert messages" ON public.messages;
