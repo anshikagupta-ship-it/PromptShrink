@@ -6,22 +6,33 @@ const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || "placeholder-a
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 /**
- * Fetch all user conversations from Supabase PostgreSQL DB
+ * Fetch all user conversations along with their messages from Supabase PostgreSQL DB
  */
 export async function getUserConversations(userId) {
   try {
-    const { data, error } = await supabase
-      .from("conversations")
-      .select("*")
-      .order("created_at", { ascending: false });
+    let query = supabase.from("conversations").select("*, messages(*)");
+    if (userId) {
+      query = query.eq("user_id", userId);
+    }
+    const { data, error } = await query.order("created_at", { ascending: false });
 
     if (error) {
-      console.warn("Supabase fetch conversations error:", error.message);
-      return [];
+      console.warn("[Supabase] Fetch conversations notice:", error.message);
+      // Fallback: try fetching conversations alone without relational join
+      const { data: simpleConvos, error: simpleError } = await supabase
+        .from("conversations")
+        .select("*")
+        .order("created_at", { ascending: false });
+
+      if (simpleError) {
+        console.warn("[Supabase] Fallback fetch conversations notice:", simpleError.message);
+        return [];
+      }
+      return simpleConvos || [];
     }
     return data || [];
   } catch (err) {
-    console.warn("Supabase connection warning:", err.message);
+    console.warn("[Supabase] Connection exception:", err.message);
     return [];
   }
 }
@@ -38,12 +49,12 @@ export async function getConversationMessages(conversationId) {
       .order("created_at", { ascending: true });
 
     if (error) {
-      console.warn("Supabase fetch messages error:", error.message);
+      console.warn("[Supabase] Fetch messages notice:", error.message);
       return [];
     }
     return data || [];
   } catch (err) {
-    console.warn("Supabase fetch messages warning:", err.message);
+    console.warn("[Supabase] Fetch messages exception:", err.message);
     return [];
   }
 }
@@ -60,27 +71,32 @@ export async function saveConversationThread({
   result,
 }) {
   try {
+    const convoPayload = {
+      title: title || promptText.slice(0, 30) + "...",
+      model,
+      target_ratio: targetRatio,
+    };
+
+    if (userId) {
+      convoPayload.user_id = userId;
+    }
+
     // 1. Create conversation record
     const { data: convo, error: convoError } = await supabase
       .from("conversations")
-      .insert([
-        {
-          user_id: userId || null,
-          title: title || promptText.slice(0, 30) + "...",
-          model,
-          target_ratio: targetRatio,
-        },
-      ])
+      .insert([convoPayload])
       .select()
       .single();
 
     if (convoError || !convo) {
-      console.warn("Supabase convo insert info:", convoError?.message);
+      console.error("[Supabase Error] Conversation insert failed:", convoError?.message || convoError);
       return null;
     }
 
+    console.log("[Supabase] Successfully saved conversation thread:", convo.id);
+
     // 2. Insert User Prompt & Assistant Response Messages
-    await supabase.from("messages").insert([
+    const { error: msgError } = await supabase.from("messages").insert([
       {
         conversation_id: convo.id,
         sender: "user",
@@ -92,16 +108,22 @@ export async function saveConversationThread({
       {
         conversation_id: convo.id,
         sender: "assistant",
-        content: result?.generatedAnswer || result?.compressedPrompt || "",
+        content: result?.compressedPrompt || result?.generatedAnswer || "",
         original_tokens: result?.originalTokens || 0,
         compressed_tokens: result?.compressedTokens || 0,
         reduction_ratio: result?.reductionRatio || 0,
       },
     ]);
 
+    if (msgError) {
+      console.error("[Supabase Error] Messages insert failed:", msgError.message);
+    } else {
+      console.log("[Supabase] Successfully saved conversation messages for:", convo.id);
+    }
+
     return convo;
   } catch (err) {
-    console.warn("Supabase save thread warning:", err.message);
+    console.error("[Supabase Exception] Save thread failed:", err.message);
     return null;
   }
 }
@@ -115,9 +137,9 @@ export async function appendMessagesToConversation({
   result,
 }) {
   try {
-    if (!conversationId) return;
+    if (!conversationId || conversationId.startsWith("hist-")) return;
 
-    await supabase.from("messages").insert([
+    const { error: msgError } = await supabase.from("messages").insert([
       {
         conversation_id: conversationId,
         sender: "user",
@@ -129,12 +151,16 @@ export async function appendMessagesToConversation({
       {
         conversation_id: conversationId,
         sender: "assistant",
-        content: result?.generatedAnswer || result?.compressedPrompt || "",
+        content: result?.compressedPrompt || result?.generatedAnswer || "",
         original_tokens: result?.originalTokens || 0,
         compressed_tokens: result?.compressedTokens || 0,
         reduction_ratio: result?.reductionRatio || 0,
       },
     ]);
+
+    if (msgError) {
+      console.error("[Supabase Error] Append messages failed:", msgError.message);
+    }
 
     // Touch updated_at timestamp
     await supabase
@@ -142,7 +168,7 @@ export async function appendMessagesToConversation({
       .update({ updated_at: new Date().toISOString() })
       .eq("id", conversationId);
   } catch (err) {
-    console.warn("Supabase append messages error:", err.message);
+    console.error("[Supabase Exception] Append messages failed:", err.message);
   }
 }
 
@@ -151,14 +177,15 @@ export async function appendMessagesToConversation({
  */
 export async function renameConversationDb(conversationId, newTitle) {
   try {
+    if (!conversationId || conversationId.startsWith("hist-")) return;
     const { error } = await supabase
       .from("conversations")
       .update({ title: newTitle, updated_at: new Date().toISOString() })
       .eq("id", conversationId);
 
-    if (error) console.warn("Supabase rename warning:", error.message);
+    if (error) console.warn("[Supabase] Rename notice:", error.message);
   } catch (err) {
-    console.warn("Supabase rename error:", err.message);
+    console.warn("[Supabase] Rename exception:", err.message);
   }
 }
 
@@ -167,13 +194,14 @@ export async function renameConversationDb(conversationId, newTitle) {
  */
 export async function deleteConversationDb(conversationId) {
   try {
+    if (!conversationId || conversationId.startsWith("hist-")) return;
     const { error } = await supabase
       .from("conversations")
       .delete()
       .eq("id", conversationId);
 
-    if (error) console.warn("Supabase delete warning:", error.message);
+    if (error) console.warn("[Supabase] Delete notice:", error.message);
   } catch (err) {
-    console.warn("Supabase delete error:", err.message);
+    console.warn("[Supabase] Delete exception:", err.message);
   }
 }
