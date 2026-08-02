@@ -47,10 +47,13 @@ export default function Home() {
   const [isLoading, setIsLoading] = useState(false);
   const [activeConvoId, setActiveConvoId] = useState(null);
 
-  // Initialize recentHistory from localStorage cache for instant zero-delay render
+  // Compute user-scoped cache key to prevent history leaking across accounts
+  const cacheKey = user?.id ? `cz_recent_history_${user.id}` : "cz_recent_history_guest";
+
+  // Initialize recentHistory from user-scoped localStorage cache
   const [recentHistory, setRecentHistory] = useState(() => {
     try {
-      const cached = localStorage.getItem("cz_recent_history");
+      const cached = localStorage.getItem(cacheKey);
       return cached ? JSON.parse(cached) : [];
     } catch {
       return [];
@@ -65,68 +68,84 @@ export default function Home() {
 
   const chatEndRef = useRef(null);
 
-  // Persist recent history to localStorage cache
+  // Persist recent history to user-scoped localStorage cache
   useEffect(() => {
     try {
       if (recentHistory.length > 0) {
-        localStorage.setItem("cz_recent_history", JSON.stringify(recentHistory));
+        localStorage.setItem(cacheKey, JSON.stringify(recentHistory));
+      } else {
+        localStorage.removeItem(cacheKey);
       }
     } catch (err) {
       console.warn("localStorage cache save error:", err);
     }
-  }, [recentHistory]);
+  }, [recentHistory, cacheKey]);
 
   // Sync conversations from Supabase ONLY after auth check completes
   useEffect(() => {
-    // Don't run until the /api/auth/me check has completed (prevents querying with null user)
     if (!isAuthChecked) return;
 
-    async function loadDbConversations() {
-      // Use user.id UUID — matches the foreign key constraint on conversations.user_id → users.id
-      // user.id is now stable in Supabase (not ephemeral SQLite) after backend migration
-      const accountKey = user?.id;
-      console.log("[Home] Auth checked. user.id:", accountKey, "user.email:", user?.email, "| isAuthChecked:", isAuthChecked);
-      if (!accountKey) {
-        console.log("[Home] No accountKey - user not logged in, skipping DB load.");
-        return;
+    // Reset active chat view on user switch or logout
+    setActiveConvoId(null);
+    setMessages([]);
+    setLatestResult(null);
+
+    const accountKey = user?.id;
+    if (!accountKey) {
+      // Guest mode -> load guest cache or empty
+      try {
+        const guestCache = localStorage.getItem("cz_recent_history_guest");
+        setRecentHistory(guestCache ? JSON.parse(guestCache) : []);
+      } catch {
+        setRecentHistory([]);
       }
+      return;
+    }
 
+    // Pre-populate with user's specific local cache while DB query resolves
+    try {
+      const userCache = localStorage.getItem(`cz_recent_history_${accountKey}`);
+      setRecentHistory(userCache ? JSON.parse(userCache) : []);
+    } catch {
+      setRecentHistory([]);
+    }
+
+    async function loadDbConversations() {
       const dbConvos = await getUserConversations(accountKey);
-      console.log("[Home] Supabase DB conversations loaded:", dbConvos?.length, dbConvos);
       if (dbConvos && dbConvos.length > 0) {
-        setRecentHistory(() => {
-          return dbConvos.map((dbc) => {
-            const dbMsgs = dbc.messages && dbc.messages.length > 0
-              ? dbc.messages.map((m) => ({
-                  id: m.id,
-                  sender: m.sender,
-                  text: m.content,
-                  originalTokens: m.original_tokens,
-                  result:
-                    m.sender === "assistant"
-                      ? {
-                          originalTokens: m.original_tokens,
-                          compressedTokens: m.compressed_tokens,
-                          reductionRatio: m.reduction_ratio,
-                          compressedPrompt: m.content,
-                          generatedAnswer: m.content,
-                          accuracyRetention: 98.2,
-                        }
-                      : null,
-                }))
-              : [];
+        const formattedConvos = dbConvos.map((dbc) => {
+          const dbMsgs = dbc.messages && dbc.messages.length > 0
+            ? dbc.messages.map((m) => ({
+                id: m.id,
+                sender: m.sender,
+                text: m.content,
+                originalTokens: m.original_tokens,
+                result:
+                  m.sender === "assistant"
+                    ? {
+                        originalTokens: m.original_tokens,
+                        compressedTokens: m.compressed_tokens,
+                        reductionRatio: m.reduction_ratio,
+                        compressedPrompt: m.content,
+                        generatedAnswer: m.content,
+                        accuracyRetention: 98.2,
+                      }
+                    : null,
+              }))
+            : [];
 
-            return {
-              id: dbc.id,
-              title: dbc.title,
-              model: dbc.model,
-              createdAt: dbc.created_at,
-              messages: dbMsgs,
-            };
-          });
+          return {
+            id: dbc.id,
+            title: dbc.title,
+            model: dbc.model,
+            createdAt: dbc.created_at,
+            messages: dbMsgs,
+          };
         });
+        setRecentHistory(formattedConvos);
       } else {
-        console.log("[Home] No conversations found in Supabase for:", accountKey);
+        // User has 0 conversations in DB -> clear history completely for this account
+        setRecentHistory([]);
       }
     }
     loadDbConversations();
