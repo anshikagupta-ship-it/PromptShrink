@@ -33,37 +33,41 @@ export default function LandingLiveCompressor() {
       return `Implement Google OAuth authentication in a React application with a Node.js Express backend. Provide step-by-step code examples for frontend and backend.`;
     }
 
-    if (text.includes("payment-gateway")) {
-      return `ERROR [payment-gateway] HTTP 429 Too Many Requests on endpoint /v1/charges. Retries 1-2 failed.
-CRITICAL [order-processor] DB Connection pool spike 450/500. Queue backlog: 12,500 items.`;
+    if (text.includes("PromptShrink server")) {
+      return `2026-08-02 10:14:10-17 INFO Compression complete: Original 2842 tokens -> Compressed 1638 tokens (42.36% ratio).
+2026-08-02 10:14:16 ERROR Failed to parse malformed JSON. Falling back to safe parser.
+2026-08-02 10:14:17 INFO Compression complete: Original 3001 tokens -> Compressed 1714 tokens (42.88% ratio).
+Server healthy. Waiting for incoming requests...`;
     }
 
-    if (text.includes("CloudSupport")) {
-      return `User requested Enterprise upgrade for subscription plan #941 on account ACC-88912.
-Blocked by pending invoice INV-4402. Invoice settled via credit card. Upgrade activated.`;
+    if (text.includes("project management platform") || text.includes("scalability")) {
+      return `User Requirements: AI-powered project management platform.
+Features: Auth, projects, tasks, comments, notifications, analytics, AI summaries, RBAC.
+Tech Stack: React (frontend), FastAPI (backend), PostgreSQL (database), Redis (cache), S3-compatible storage.
+DevOps/Deployment: Docker, Kubernetes, GitHub Actions, Prometheus, Grafana, Loki, Nginx.
+Deliverables: Architectural decision explanations, tradeoffs, diagrams, API examples, DB schema, folder structure.`;
     }
 
-    // Generic fallback condensation: Keep key action lines and filter repetitive fillers
-    const filtered = sentences.filter((s) => {
+    if (text.includes("URL Shortener") || text.includes("Bit.ly")) {
+      return `Task: Production-ready Bit.ly URL Shortener backend architecture.
+Requirements: High-level architecture, technology trade-offs (FastAPI vs Flask/Django, PostgreSQL vs MySQL/Mongo, Redis caching/rate-limiting/locking).
+Core Features: Auth (OAuth/JWT), shortening, custom aliases, analytics, QR codes, expiration, password protection, orgs/workspaces, public APIs, admin dashboard.
+Deliverables: SQL schemas, API endpoint specs, error handling, security (HTTPS, CORS, CSRF, SQLi, XSS), observability, scaling, deployment strategies & 100 to 100M user roadmap.`;
+    }
+
+    // Generic fallback deduplication & filler removal
+    const uniqueSentences = Array.from(new Set(sentences));
+    const filtered = uniqueSentences.filter((s) => {
       const lower = s.toLowerCase();
       return (
-        !lower.includes("hello") &&
         !lower.includes("thank you") &&
-        !lower.includes("health check ok") &&
-        !lower.includes("retry attempt 1") &&
-        !lower.includes("hope you're having")
+        !lower.includes("thanks again") &&
+        !lower.includes("happy to help") &&
+        !lower.includes("you're welcome")
       );
     });
 
-    return (
-      filtered.join("\n") ||
-      text
-        .replace(/I am currently in the process of/gi, "")
-        .replace(/I would like to know how I can/gi, "")
-        .replace(/Could you please provide/gi, "Provide")
-        .replace(/Thank you so much for your assistance!/gi, "")
-        .trim()
-    );
+    return filtered.join("\n") || text;
   };
 
   const optimizedText = compressTextLocally(inputPrompt);

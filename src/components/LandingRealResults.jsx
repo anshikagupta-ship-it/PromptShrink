@@ -55,7 +55,7 @@ export default function LandingRealResults() {
       buildResultItem(
         "CUSTOMER SUPPORT PROMPT",
         presets[1]?.context || "Multi-turn chat history example",
-        "User ACC-88912 requested Enterprise upgrade. Blocked by pending invoice. Settled via card."
+        "User Requirements: AI-powered project management platform with React, FastAPI, Postgres, Redis, K8s."
       ),
       buildResultItem(
         "API SPECIFICATION PROMPT",
