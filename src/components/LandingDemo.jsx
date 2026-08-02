@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { estimateTokens } from "../services/api";
+import { estimateTokens, PRESET_SAMPLES } from "../services/api";
 
 /**
  * Safely constructs demo sample objects with full try/catch exception handling,
@@ -35,7 +35,7 @@ function buildDemoSample(title = "Sample Prompt", originalText = "", rawOptimize
       reduction,
       speedup,
       originalText: safeOrigText,
-      optimizedText: safeOptText ? `[CONTEXTZERO OPTIMIZED - ${reduction}% Reduction]\n` + safeOptText : safeOrigText,
+      optimizedText: safeOptText,
     };
   } catch (err) {
     console.error("[LandingDemo] Exception constructing demo sample:", err);
@@ -56,41 +56,35 @@ export default function LandingDemo() {
 
   let samples = {};
   try {
+    const p0 = PRESET_SAMPLES?.[0]?.context || "";
+    const p1 = PRESET_SAMPLES?.[1]?.context || "";
+    const p2 = PRESET_SAMPLES?.[2]?.context || "";
+
     samples = {
       logs: buildDemoSample(
         "Server Incident Logs",
-        `[2026-08-01 10:14:01] INFO [auth-service] Health check OK. Response time 12ms.
-[2026-08-01 10:14:02] INFO [auth-service] User session validated for user_id=98214.
-[2026-08-01 10:14:05] WARN [payment-gateway] Connection pool at 85% capacity. Retrying...
-[2026-08-01 10:14:07] ERROR [payment-gateway] HTTP 429 Too Many Requests from upstream stripe-api /v1/charges.
-[2026-08-01 10:14:07] ERROR [payment-gateway] Retry attempt 1 failed with status 429.
-[2026-08-01 10:14:08] ERROR [payment-gateway] Retry attempt 2 failed with status 429.
-[2026-08-01 10:14:10] CRITICAL [order-processor] DB Connection spike! Active: 450/500 connections. Backlog: 12,500 items.`,
-        `ERROR [payment-gateway] HTTP 429 Too Many Requests on upstream endpoint /v1/charges. Retries 1-3 failed.
-CRITICAL [order-processor] DB Connection pool spike 450/500. Queue backlog reached 12,500 items.`
+        p0,
+        `2026-08-02 10:14:10-17 INFO Compression complete: Original 2842 tokens -> Compressed 1638 tokens (42.36% ratio).
+2026-08-02 10:14:16 ERROR Failed to parse malformed JSON. Falling back to safe parser.
+2026-08-02 10:14:17 INFO Compression complete: Original 3001 tokens -> Compressed 1714 tokens (42.88% ratio).
+Server healthy. Waiting for incoming requests...`
       ),
       support: buildDemoSample(
         "Customer Support History",
-        `Customer (10:00 AM): Hello, is anyone available to help me today? Hope you're having a good morning!
-Agent (10:01 AM): Hello! Thanks for reaching out to CloudSupport. My name is Alex. How can I assist you today?
-Customer (10:02 AM): Hi Alex! I am trying to upgrade my database tier from Standard to Enterprise on subscription plan #941.
-Agent (10:03 AM): I understand! Account ACC-88912 has a pending invoice INV-4402 from last month.
-Customer (10:08 AM): I just paid invoice INV-4402 via credit card. Can you verify?
-Agent (10:10 AM): Verified! Invoice INV-4402 is settled. Enterprise tier upgrade is active.`,
-        `User ACC-88912 requested Enterprise upgrade for plan #941.
-Blocked by pending invoice INV-4402. Invoice settled via credit card. Upgrade activated successfully.`
+        p1,
+        `User Requirements: AI-powered project management platform.
+Features: Auth, projects, tasks, comments, notifications, analytics, AI summaries, RBAC.
+Tech Stack: React (frontend), FastAPI (backend), PostgreSQL (database), Redis (cache), S3-compatible storage.
+DevOps/Deployment: Docker, Kubernetes, GitHub Actions, Prometheus, Grafana, Loki, Nginx.
+Deliverables: Architectural decision explanations, tradeoffs, diagrams, API examples, DB schema, folder structure.`
       ),
       docs: buildDemoSample(
         "API Documentation",
-        `General Requirements: All requests must include Bearer token authorization in the HTTP Header format: 'Authorization: Bearer <TOKEN>'.
-Content-Type header must be strictly set to 'application/json'.
-Rate Limiting: Each tenant is capped at 1,000 requests per minute per IP address.
-Error Responses:
-- 400 Bad Request: Returns JSON object {"error": "INVALID_PAYLOAD"}.
-- 401 Unauthorized: Returns JSON object {"error": "MISSING_BEARER_TOKEN"}.
-- 429 Too Many Requests: Returns JSON object {"error": "RATE_LIMIT_EXCEEDED"}.`,
-        `Auth: Header 'Authorization: Bearer <TOKEN>', Content-Type: application/json. Rate Limit: 1,000 req/min/IP.
-Errors: 400 INVALID_PAYLOAD, 401 MISSING_BEARER_TOKEN, 429 RATE_LIMIT_EXCEEDED.`
+        p2,
+        `Task: Production-ready Bit.ly URL Shortener backend architecture.
+Requirements: High-level architecture, technology trade-offs (FastAPI vs Flask/Django, PostgreSQL vs MySQL/Mongo, Redis caching/rate-limiting/locking).
+Core Features: Auth (OAuth/JWT), shortening, custom aliases, analytics, QR codes, expiration, password protection, orgs/workspaces, public APIs, admin dashboard.
+Deliverables: SQL schemas, API endpoint specs, error handling, security (HTTPS, CORS, CSRF, SQLi, XSS), observability, scaling, deployment strategies & 100 to 100M user roadmap.`
       ),
     };
   } catch (err) {
