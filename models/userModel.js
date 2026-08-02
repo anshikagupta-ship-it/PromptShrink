@@ -1,64 +1,78 @@
-import db from "../db/database.js";
+import { supabaseAdmin } from "../db/supabaseAdmin.js";
 import { cryptoNative } from "../utils/cryptoUtil.js";
 
 export const UserModel = {
-  findUserByGoogleSub(googleSub) {
-    return new Promise((resolve, reject) => {
-      db.get("SELECT * FROM users WHERE google_sub = ?", [googleSub], (err, row) => {
-        if (err) return reject(err);
-        if (!row) return resolve(null);
-        resolve({
-          id: row.id,
-          googleSub: row.google_sub,
-          email: row.email,
-          name: row.name,
-          avatarUrl: row.avatar_url,
-          createdAt: row.created_at,
-          updatedAt: row.updated_at,
-        });
-      });
-    });
+  async findUserByGoogleSub(googleSub) {
+    const { data, error } = await supabaseAdmin
+      .from("users")
+      .select("*")
+      .eq("google_sub", googleSub)
+      .maybeSingle();
+
+    if (error) {
+      console.error("[UserModel] findUserByGoogleSub error:", error.message);
+      return null;
+    }
+    if (!data) return null;
+
+    return {
+      id: data.id,
+      googleSub: data.google_sub,
+      email: data.email,
+      name: data.name,
+      avatarUrl: data.avatar_url,
+      createdAt: data.created_at,
+      updatedAt: data.updated_at,
+    };
   },
 
-  findUserById(id) {
-    return new Promise((resolve, reject) => {
-      db.get("SELECT * FROM users WHERE id = ?", [id], (err, row) => {
-        if (err) return reject(err);
-        if (!row) return resolve(null);
-        resolve({
-          id: row.id,
-          googleSub: row.google_sub,
-          email: row.email,
-          name: row.name,
-          avatarUrl: row.avatar_url,
-          createdAt: row.created_at,
-          updatedAt: row.updated_at,
-        });
-      });
-    });
+  async findUserById(id) {
+    const { data, error } = await supabaseAdmin
+      .from("users")
+      .select("*")
+      .eq("id", id)
+      .maybeSingle();
+
+    if (error) {
+      console.error("[UserModel] findUserById error:", error.message);
+      return null;
+    }
+    if (!data) return null;
+
+    return {
+      id: data.id,
+      googleSub: data.google_sub,
+      email: data.email,
+      name: data.name,
+      avatarUrl: data.avatar_url,
+      createdAt: data.created_at,
+      updatedAt: data.updated_at,
+    };
   },
 
-  createUser({ googleSub, email, name, avatarUrl }) {
-    return new Promise((resolve, reject) => {
-      const id = cryptoNative.randomUUID();
-      const now = new Date().toISOString();
+  async createUser({ googleSub, email, name, avatarUrl }) {
+    const id = cryptoNative.randomUUID();
+    const now = new Date().toISOString();
 
-      db.run(
-        `INSERT INTO users (id, google_sub, email, name, avatar_url, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)`,
-        [id, googleSub, email, name, avatarUrl, now, now],
-        function (err) {
-          if (err) return reject(err);
-          resolve({
-            id,
-            googleSub,
-            email,
-            name,
-            avatarUrl,
-            createdAt: now,
-            updatedAt: now,
-          });
-        }
-      );
-    });
+    const { data, error } = await supabaseAdmin
+      .from("users")
+      .insert([{ id, google_sub: googleSub, email, name, avatar_url: avatarUrl, created_at: now, updated_at: now }])
+      .select()
+      .single();
+
+    if (error) {
+      console.error("[UserModel] createUser error:", error.message);
+      throw new Error(error.message);
+    }
+
+    return {
+      id: data.id,
+      googleSub: data.google_sub,
+      email: data.email,
+      name: data.name,
+      avatarUrl: data.avatar_url,
+      createdAt: data.created_at,
+      updatedAt: data.updated_at,
+    };
   },
 };
