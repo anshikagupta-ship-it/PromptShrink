@@ -160,6 +160,10 @@ export default function Home() {
   const handleSelectRecent = async (item) => {
     setCurrentView("chat");
     setActiveConvoId(item.id);
+    // Auto-close sidebar on mobile after selecting a conversation
+    if (typeof window !== "undefined" && window.innerWidth < 768) {
+      setIsSidebarOpen(false);
+    }
 
     // 1. Instant load from local cached messages
     let hasLoaded = false;
@@ -348,6 +352,14 @@ export default function Home() {
 
   return (
     <div className="flex h-screen bg-[#0D0D0F] text-[#F5F5F5] font-sans overflow-hidden">
+      {/* Mobile backdrop - tap outside to close sidebar */}
+      {isSidebarOpen && (
+        <div
+          className="fixed inset-0 z-30 bg-black/60 md:hidden"
+          onClick={() => setIsSidebarOpen(false)}
+        />
+      )}
+
       {/* LEFT COLUMN: Sidebar (250px) - Chat History & Nav */}
       <Sidebar
         currentView={currentView}
