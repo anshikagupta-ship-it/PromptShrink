@@ -9,7 +9,7 @@ export default function AnalyticsCharts() {
       compressed: 340,
       reduction: "72.6%",
       costSaving: "72.6%",
-      accuracy: "98.2%",
+      accuracy: "comming soon",
       latencySpeedup: "3.1x",
       status: "PASS",
     },

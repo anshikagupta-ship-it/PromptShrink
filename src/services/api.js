@@ -96,7 +96,7 @@ export async function processCompression({ prompt, model = "cO-1.0", mode = "bal
   const actualRatio = originalTokens > 0 ? (((tokensSaved) / originalTokens) * 100).toFixed(1) : "0.0";
   const costSavedEst = (tokensSaved * 0.00002).toFixed(4);
 
-  const accuracyRetention = parseFloat(Math.max(92, 100 - parseFloat(actualRatio) * 0.08).toFixed(1));
+  const accuracyRetention = "Coming Soon";
 
   const protectedEntities = [
     "Intent & User Instruction",

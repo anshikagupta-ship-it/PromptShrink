@@ -136,7 +136,7 @@ export default function Home() {
                           costSavedEst: (toksSaved * 0.00002).toFixed(4),
                           compressedPrompt: m.content,
                           generatedAnswer: m.content,
-                          accuracyRetention: ratio > 0 ? parseFloat(Math.max(92, 100 - ratio * 0.08).toFixed(1)) : 100.0,
+                          accuracyRetention: "Coming Soon",
                         };
                       })()
                     : null,
@@ -235,7 +235,7 @@ export default function Home() {
                     costSavedEst: (toksSaved * 0.00002).toFixed(4),
                     compressedPrompt: m.content,
                     generatedAnswer: m.content,
-                    accuracyRetention: ratio > 0 ? parseFloat(Math.max(92, 100 - ratio * 0.08).toFixed(1)) : 100.0,
+                    accuracyRetention: "Coming Soon",
                   };
                 })()
               : null,
