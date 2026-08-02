@@ -48,8 +48,8 @@ export default function StatsCards({ result }) {
     },
     {
       title: "Accuracy Retention",
-      value: `${result.accuracyRetention}%`,
-      subtext: `Target ≥95% retention achieved ✓`,
+      value: "Coming Soon",
+      subtext: "Evaluation suite in progress",
       color: "from-blue-500/20 to-blue-600/10",
       borderColor: "border-blue-500/30",
       textColor: "text-blue-400",

@@ -101,8 +101,8 @@ export default function DashboardPanel({ latestResult, isOpen, onClose }) {
 
                 <div className="bg-[#1a1a1a] border border-white/[0.07] p-2.5 rounded-lg space-y-0.5">
                   <div className="text-[10px] text-[#737373]">Accuracy Retention</div>
-                  <div className="font-mono text-sm font-semibold text-[#f5f5f5]">
-                    {accuracyRetention > 0 ? `${accuracyRetention}%` : "—"}
+                  <div className="font-mono text-xs font-semibold text-[#a3a3a3]">
+                    Coming Soon
                   </div>
                 </div>
 

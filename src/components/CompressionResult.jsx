@@ -48,8 +48,8 @@ export default function CompressionResult({ result, onInspect }) {
         </div>
 
         <div className="bg-[#1f1f1f]/50 p-2 sm:p-0 rounded-lg sm:bg-transparent border border-white/[0.04] sm:border-none">
-          <div className="font-mono font-medium text-[#f5f5f5] text-sm">
-            {result.accuracyRetention}%
+          <div className="font-mono font-medium text-[#a3a3a3] text-xs">
+            Coming Soon
           </div>
           <div className="text-[11px] text-[#737373] mt-0.5">Retention</div>
         </div>

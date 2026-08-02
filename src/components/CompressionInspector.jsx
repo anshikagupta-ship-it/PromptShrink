@@ -64,7 +64,7 @@ export default function CompressionInspector({ isOpen, onClose, data }) {
             </div>
             <div>
               <div className="text-[10px] sm:text-[11px] text-[#71717A]">Preservation</div>
-              <div className="text-indigo-400 font-medium mt-0.5 text-xs sm:text-sm">{result.accuracyRetention}% ✓</div>
+              <div className="text-[#a3a3a3] font-medium mt-0.5 text-xs">Coming Soon</div>
             </div>
           </div>
 
