@@ -24,9 +24,6 @@ CREATE TABLE IF NOT EXISTS public.users (
 );
 
 -- 3. CONVERSATIONS TABLE
--- Clean up any existing public/anonymous conversations before enforcing NOT NULL
-DELETE FROM public.conversations WHERE user_id IS NULL;
-
 CREATE TABLE IF NOT EXISTS public.conversations (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
   user_id uuid NOT NULL,
