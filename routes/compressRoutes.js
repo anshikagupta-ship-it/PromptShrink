@@ -56,6 +56,7 @@ function runCliCompressor(promptText) {
       if (!fs.existsSync(outputFile)) {
         cleanupTempFiles(inputFile, outputFile);
         console.warn("[CLI WARN] CLI finished but output file was missing. Using JS engine.");
+        if (stderr) console.warn(`[DEBUG CLI stderr]:\n${stderr}`);
         return resolve(null);
       }
 
