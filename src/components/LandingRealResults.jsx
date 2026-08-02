@@ -50,7 +50,7 @@ export default function LandingRealResults() {
       buildResultItem(
         "LOG ANALYSIS PROMPT",
         presets[0]?.context || "Server log payload example",
-        "ERROR [payment-gateway] HTTP 429 Too Many Requests. Retries failed.\nCRITICAL DB Connection pool spike."
+        "2026-08-02 10:14:10-17 INFO Compression complete: Original 2842 tokens -> Compressed 1638 tokens. Server healthy."
       ),
       buildResultItem(
         "CUSTOMER SUPPORT PROMPT",
@@ -60,7 +60,7 @@ export default function LandingRealResults() {
       buildResultItem(
         "API SPECIFICATION PROMPT",
         presets[2]?.context || "Verbose API spec example",
-        "Auth: Bearer token, Content-Type: application/json. Rate Limit: 1000 req/min. Errors: 400, 401, 429."
+        "Task: Production-ready Bit.ly URL Shortener backend architecture with FastAPI, PostgreSQL, Redis & Kubernetes."
       ),
     ];
   } catch (err) {

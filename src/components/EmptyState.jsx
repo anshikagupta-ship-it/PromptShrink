@@ -5,17 +5,17 @@ export default function EmptyState({ onSelectPreset }) {
   const suggestions = [
     {
       title: "Analyze server logs",
-      desc: "HTTP 429 & DB spike logs",
+      desc: "Server incident & system logs",
       sample: PRESET_SAMPLES[0],
     },
     {
       title: "Summarize support history",
-      desc: "Multi-turn chat history",
+      desc: "AI project management chat",
       sample: PRESET_SAMPLES[1],
     },
     {
       title: "Compress API documentation",
-      desc: "Verbose microservices spec",
+      desc: "URL Shortener architecture spec",
       sample: PRESET_SAMPLES[2],
     },
   ];
