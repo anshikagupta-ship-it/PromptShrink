@@ -2,43 +2,53 @@ import { createClient } from "@supabase/supabase-js";
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || "https://placeholder-supabase.supabase.co";
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || "placeholder-anon-key";
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8080";
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 /**
- * Fetch all user conversations along with their messages from Supabase PostgreSQL DB
+ * Fetch all user conversations along with their messages
+ * Tries authenticated Express API first (session cookie verified), falls back to direct Supabase client
  */
 export async function getUserConversations(userId) {
-  if (!userId) {
-    console.warn("[Supabase] getUserConversations called without userId, returning empty array.");
-    return [];
-  }
+  if (!userId) return [];
+
+  // Step 1: Try authenticated Express backend endpoint
   try {
-    // 1. Fetch conversations belonging ONLY to this user
+    const response = await fetch(`${API_BASE_URL}/api/conversations`, {
+      method: "GET",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+    });
+
+    if (response.ok) {
+      const data = await response.json();
+      if (Array.isArray(data.conversations)) {
+        return data.conversations;
+      }
+    }
+  } catch (backendErr) {
+    console.warn("[API] Backend conversations fetch notice:", backendErr.message);
+  }
+
+  // Step 2: Direct Supabase client query with explicit user_id filter
+  try {
     const { data: convos, error: convoError } = await supabase
       .from("conversations")
       .select("*")
       .eq("user_id", userId)
       .order("created_at", { ascending: false });
 
-    if (convoError || !convos) {
-      console.warn("[Supabase] Fetch conversations notice:", convoError?.message);
+    if (convoError || !convos || convos.length === 0) {
       return [];
     }
 
-    if (convos.length === 0) return [];
-
-    // 2. Fetch messages for these conversations
     const convoIds = convos.map((c) => c.id);
-    const { data: msgs, error: msgsError } = await supabase
+    const { data: msgs } = await supabase
       .from("messages")
       .select("*")
       .in("conversation_id", convoIds)
       .order("created_at", { ascending: true });
-
-    if (msgsError) {
-      console.warn("[Supabase] Fetch messages notice:", msgsError?.message);
-    }
 
     const messagesByConvo = (msgs || []).reduce((acc, m) => {
       if (!acc[m.conversation_id]) acc[m.conversation_id] = [];
@@ -57,29 +67,8 @@ export async function getUserConversations(userId) {
 }
 
 /**
- * Fetch messages for a specific conversation ID
- */
-export async function getConversationMessages(conversationId) {
-  try {
-    const { data, error } = await supabase
-      .from("messages")
-      .select("*")
-      .eq("conversation_id", conversationId)
-      .order("created_at", { ascending: true });
-
-    if (error) {
-      console.warn("[Supabase] Fetch messages notice:", error.message);
-      return [];
-    }
-    return data || [];
-  } catch (err) {
-    console.warn("[Supabase] Fetch messages exception:", err.message);
-    return [];
-  }
-}
-
-/**
- * Save new conversation thread & messages to Supabase DB
+ * Save new conversation thread & messages
+ * Tries authenticated Express API first, falls back to direct Supabase client
  */
 export async function saveConversationThread({
   userId,
@@ -89,10 +78,36 @@ export async function saveConversationThread({
   promptText,
   result,
 }) {
-  if (!userId) {
-    console.warn("[Supabase] saveConversationThread skipped: No userId provided.");
-    return null;
+  if (!userId && !promptText) return null;
+
+  // Step 1: Try authenticated Express backend endpoint
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/conversations`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify({
+        title,
+        model,
+        targetRatio,
+        promptText,
+        result,
+      }),
+    });
+
+    if (response.ok) {
+      const data = await response.json();
+      if (data.conversation) {
+        return data.conversation;
+      }
+    }
+  } catch (backendErr) {
+    console.warn("[API] Backend conversation save notice:", backendErr.message);
   }
+
+  // Step 2: Direct Supabase client insert
+  if (!userId) return null;
+
   try {
     const convoPayload = {
       title: title || promptText.slice(0, 30) + "...",
@@ -101,7 +116,6 @@ export async function saveConversationThread({
       user_id: userId,
     };
 
-    // 1. Create conversation record
     const { data: convo, error: convoError } = await supabase
       .from("conversations")
       .insert([convoPayload])
@@ -109,14 +123,11 @@ export async function saveConversationThread({
       .single();
 
     if (convoError || !convo) {
-      console.error("[Supabase Error] Conversation insert failed:", convoError?.message || convoError);
+      console.error("[Supabase Error] Conversation insert failed:", convoError?.message);
       return null;
     }
 
-    console.log("[Supabase] Successfully saved conversation thread:", convo.id);
-
-    // 2. Insert User Prompt & Assistant Response Messages
-    const { error: msgError } = await supabase.from("messages").insert([
+    await supabase.from("messages").insert([
       {
         conversation_id: convo.id,
         sender: "user",
@@ -134,12 +145,6 @@ export async function saveConversationThread({
         reduction_ratio: result?.reductionRatio || 0,
       },
     ]);
-
-    if (msgError) {
-      console.error("[Supabase Error] Messages insert failed:", msgError.message);
-    } else {
-      console.log("[Supabase] Successfully saved conversation messages for:", convo.id);
-    }
 
     return convo;
   } catch (err) {
@@ -159,7 +164,7 @@ export async function appendMessagesToConversation({
   try {
     if (!conversationId || conversationId.startsWith("hist-")) return;
 
-    const { error: msgError } = await supabase.from("messages").insert([
+    await supabase.from("messages").insert([
       {
         conversation_id: conversationId,
         sender: "user",
@@ -178,49 +183,41 @@ export async function appendMessagesToConversation({
       },
     ]);
 
-    if (msgError) {
-      console.error("[Supabase Error] Append messages failed:", msgError.message);
-    }
-
-    // Touch updated_at timestamp
     await supabase
       .from("conversations")
       .update({ updated_at: new Date().toISOString() })
       .eq("id", conversationId);
   } catch (err) {
-    console.error("[Supabase Exception] Append messages failed:", err.message);
+    console.warn("[Supabase Exception] Append messages failed:", err.message);
   }
 }
 
 /**
- * Rename a conversation in Supabase DB
- */
-export async function renameConversationDb(conversationId, newTitle) {
-  try {
-    if (!conversationId || conversationId.startsWith("hist-")) return;
-    const { error } = await supabase
-      .from("conversations")
-      .update({ title: newTitle, updated_at: new Date().toISOString() })
-      .eq("id", conversationId);
-
-    if (error) console.warn("[Supabase] Rename notice:", error.message);
-  } catch (err) {
-    console.warn("[Supabase] Rename exception:", err.message);
-  }
-}
-
-/**
- * Delete a conversation in Supabase DB
+ * Delete a conversation thread
+ * Tries authenticated Express API first, falls back to direct Supabase client
  */
 export async function deleteConversationDb(conversationId) {
+  if (!conversationId || conversationId.startsWith("hist-")) return;
+
+  // Step 1: Try authenticated Express backend endpoint
   try {
-    if (!conversationId || conversationId.startsWith("hist-")) return;
-    const { error } = await supabase
+    const response = await fetch(`${API_BASE_URL}/api/conversations/${conversationId}`, {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+    });
+
+    if (response.ok) return;
+  } catch (backendErr) {
+    console.warn("[API] Backend delete notice:", backendErr.message);
+  }
+
+  // Step 2: Direct Supabase client delete
+  try {
+    await supabase
       .from("conversations")
       .delete()
       .eq("id", conversationId);
-
-    if (error) console.warn("[Supabase] Delete notice:", error.message);
   } catch (err) {
     console.warn("[Supabase] Delete exception:", err.message);
   }
