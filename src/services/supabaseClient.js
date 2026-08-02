@@ -14,33 +14,42 @@ export async function getUserConversations(userId) {
     return [];
   }
   try {
-    const { data, error } = await supabase
+    // 1. Fetch conversations belonging ONLY to this user
+    const { data: convos, error: convoError } = await supabase
       .from("conversations")
-      .select("*, messages(*)")
+      .select("*")
       .eq("user_id", userId)
       .order("created_at", { ascending: false });
 
-    if (error) {
-      console.warn("[Supabase] Fetch conversations notice:", error.message);
-      // Fallback: try fetching conversations alone without relational join
-      let fallbackQuery = supabase
-        .from("conversations")
-        .select("*")
-        .order("created_at", { ascending: false });
-
-      if (userId) {
-        fallbackQuery = fallbackQuery.eq("user_id", userId);
-      }
-
-      const { data: simpleConvos, error: simpleError } = await fallbackQuery;
-
-      if (simpleError) {
-        console.warn("[Supabase] Fallback fetch conversations notice:", simpleError.message);
-        return [];
-      }
-      return simpleConvos || [];
+    if (convoError || !convos) {
+      console.warn("[Supabase] Fetch conversations notice:", convoError?.message);
+      return [];
     }
-    return data || [];
+
+    if (convos.length === 0) return [];
+
+    // 2. Fetch messages for these conversations
+    const convoIds = convos.map((c) => c.id);
+    const { data: msgs, error: msgsError } = await supabase
+      .from("messages")
+      .select("*")
+      .in("conversation_id", convoIds)
+      .order("created_at", { ascending: true });
+
+    if (msgsError) {
+      console.warn("[Supabase] Fetch messages notice:", msgsError?.message);
+    }
+
+    const messagesByConvo = (msgs || []).reduce((acc, m) => {
+      if (!acc[m.conversation_id]) acc[m.conversation_id] = [];
+      acc[m.conversation_id].push(m);
+      return acc;
+    }, {});
+
+    return convos.map((c) => ({
+      ...c,
+      messages: messagesByConvo[c.id] || [],
+    }));
   } catch (err) {
     console.warn("[Supabase] Connection exception:", err.message);
     return [];
