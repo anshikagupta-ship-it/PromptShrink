@@ -6,19 +6,68 @@ export const PRESET_SAMPLES = [
     title: "Server Incident Logs",
     description: "Multi-service HTTP 429 rate-limit & DB connection spike logs",
     task: "Identify the root cause of the incident and list failing services.",
-    context: `[2026-08-01 10:14:01] INFO [auth-service] Health check OK. Response time 12ms.
-[2026-08-01 10:14:02] INFO [auth-service] User session validated for user_id=98214.
-[2026-08-01 10:14:05] WARN [payment-gateway] Connection pool at 85% capacity. Retrying connection...
-[2026-08-01 10:14:06] WARN [payment-gateway] Connection pool at 92% capacity. Retrying connection...
-[2026-08-01 10:14:07] ERROR [payment-gateway] HTTP 429 Too Many Requests from upstream stripe-api endpoint /v1/charges.
-[2026-08-01 10:14:07] ERROR [payment-gateway] Retry attempt 1 failed with status 429.
-[2026-08-01 10:14:08] ERROR [payment-gateway] Retry attempt 2 failed with status 429.
-[2026-08-01 10:14:09] ERROR [payment-gateway] Retry attempt 3 failed with status 429. Rate limit threshold exceeded.
-[2026-08-01 10:14:10] CRITICAL [order-processor] DB Connection spike detected! Active connections: 450/500.
-[2026-08-01 10:14:11] CRITICAL [order-processor] Queue backlog reached 12,500 items due to payment-gateway failure.
-[2026-08-01 10:14:12] INFO [notification-service] Sending alert to DevOps PagerDuty channel #alerts-p1.
-[2026-08-01 10:14:15] INFO [auth-service] Health check OK. Response time 15ms.
-[2026-08-01 10:14:20] INFO [auth-service] User session validated for user_id=98215.`,
+    context: `2026-08-02 10:14:01 INFO Starting PromptShrink server...
+2026-08-02 10:14:01 INFO Loading configuration...
+2026-08-02 10:14:01 INFO Configuration loaded successfully.
+2026-08-02 10:14:02 INFO Connecting to PostgreSQL...
+2026-08-02 10:14:02 INFO PostgreSQL connection established.
+2026-08-02 10:14:02 INFO Connecting to Redis...
+2026-08-02 10:14:02 INFO Redis connection established.
+
+2026-08-02 10:14:10 INFO Received compression request.
+2026-08-02 10:14:10 INFO Input length: 14328 bytes.
+2026-08-02 10:14:10 INFO Detected English text.
+2026-08-02 10:14:10 INFO Starting lexical analysis.
+2026-08-02 10:14:10 INFO Starting lexical analysis.
+2026-08-02 10:14:10 INFO Starting lexical analysis.
+2026-08-02 10:14:10 INFO Starting lexical analysis.
+
+2026-08-02 10:14:11 INFO Tokenization complete.
+2026-08-02 10:14:11 INFO Token count: 2842.
+2026-08-02 10:14:11 INFO Token count: 2842.
+2026-08-02 10:14:11 INFO Token count: 2842.
+
+2026-08-02 10:14:11 INFO Removing duplicate sentences.
+2026-08-02 10:14:11 INFO Removing duplicate sentences.
+2026-08-02 10:14:11 INFO Removing duplicate sentences.
+
+2026-08-02 10:14:12 INFO Grouping repeated structures.
+2026-08-02 10:14:12 INFO Grouping repeated structures.
+2026-08-02 10:14:12 INFO Grouping repeated structures.
+
+2026-08-02 10:14:13 INFO Running semantic graph optimization.
+2026-08-02 10:14:13 INFO Running semantic graph optimization.
+
+2026-08-02 10:14:13 WARNING Similarity threshold exceeded.
+2026-08-02 10:14:13 WARNING Similarity threshold exceeded.
+2026-08-02 10:14:13 WARNING Similarity threshold exceeded.
+
+2026-08-02 10:14:14 INFO Compression complete.
+2026-08-02 10:14:14 INFO Original tokens: 2842.
+2026-08-02 10:14:14 INFO Compressed tokens: 1638.
+2026-08-02 10:14:14 INFO Compression ratio: 42.36%.
+
+2026-08-02 10:14:15 INFO Received compression request.
+2026-08-02 10:14:15 INFO Input length: 15104 bytes.
+2026-08-02 10:14:15 INFO Detected English text.
+2026-08-02 10:14:15 INFO Starting lexical analysis.
+2026-08-02 10:14:15 INFO Tokenization complete.
+2026-08-02 10:14:15 INFO Removing duplicate sentences.
+2026-08-02 10:14:16 INFO Grouping repeated structures.
+2026-08-02 10:14:16 INFO Running semantic graph optimization.
+2026-08-02 10:14:16 ERROR Failed to parse malformed JSON.
+2026-08-02 10:14:16 ERROR Failed to parse malformed JSON.
+2026-08-02 10:14:16 ERROR Failed to parse malformed JSON.
+2026-08-02 10:14:16 ERROR Falling back to safe parser.
+2026-08-02 10:14:17 INFO Compression complete.
+2026-08-02 10:14:17 INFO Original tokens: 3001.
+2026-08-02 10:14:17 INFO Compressed tokens: 1714.
+2026-08-02 10:14:17 INFO Compression ratio: 42.88%.
+
+2026-08-02 10:14:18 INFO Server healthy.
+2026-08-02 10:14:18 INFO Server healthy.
+2026-08-02 10:14:18 INFO Server healthy.
+2026-08-02 10:14:18 INFO Waiting for incoming requests...`,
   },
   {
     id: "support-chat",
