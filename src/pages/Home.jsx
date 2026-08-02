@@ -47,8 +47,9 @@ export default function Home() {
   const [isLoading, setIsLoading] = useState(false);
   const [activeConvoId, setActiveConvoId] = useState(null);
 
-  // Compute user-scoped cache key to prevent history leaking across accounts
-  const cacheKey = user?.id ? `cz_recent_history_${user.id}` : "cz_recent_history_guest";
+  // Compute user-scoped cache key using user.email (unique per Google account)
+  const accountKey = user?.email || user?.id;
+  const cacheKey = accountKey ? `cz_recent_history_${accountKey}` : "cz_recent_history_guest";
 
   // Initialize recentHistory from user-scoped localStorage cache
   const [recentHistory, setRecentHistory] = useState(() => {
@@ -90,8 +91,8 @@ export default function Home() {
     setMessages([]);
     setLatestResult(null);
 
-    const accountKey = user?.id;
-    if (!accountKey) {
+    const currentAccountKey = user?.email || user?.id;
+    if (!currentAccountKey) {
       // Guest mode -> load guest cache or empty
       try {
         const guestCache = localStorage.getItem("cz_recent_history_guest");
@@ -104,14 +105,14 @@ export default function Home() {
 
     // Pre-populate with user's specific local cache while DB query resolves
     try {
-      const userCache = localStorage.getItem(`cz_recent_history_${accountKey}`);
+      const userCache = localStorage.getItem(`cz_recent_history_${currentAccountKey}`);
       setRecentHistory(userCache ? JSON.parse(userCache) : []);
     } catch {
       setRecentHistory([]);
     }
 
     async function loadDbConversations() {
-      const dbConvos = await getUserConversations(accountKey);
+      const dbConvos = await getUserConversations(currentAccountKey);
       if (dbConvos && dbConvos.length > 0) {
         const formattedConvos = dbConvos.map((dbc) => {
           const dbMsgs = dbc.messages && dbc.messages.length > 0
@@ -317,10 +318,10 @@ export default function Home() {
     if (!activeConvoId) {
       // First turn in a new chat session -> Create new conversation thread in DB
       const newTitle = textToSend.slice(0, 30) + "...";
-      const accountKey = user?.id;
-      console.log("[Home] Saving new conversation. user.id (accountKey):", accountKey, "| user object:", user);
+      const currentAccountKey = user?.email || user?.id;
+      console.log("[Home] Saving new conversation. user.email/id:", currentAccountKey);
       const savedConvo = await saveConversationThread({
-        userId: accountKey,
+        userId: currentAccountKey,
         title: newTitle,
         model,
         targetRatio,

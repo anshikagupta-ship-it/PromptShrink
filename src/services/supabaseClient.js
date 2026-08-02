@@ -80,16 +80,17 @@ export async function saveConversationThread({
   promptText,
   result,
 }) {
+  if (!userId) {
+    console.warn("[Supabase] saveConversationThread skipped: No userId provided.");
+    return null;
+  }
   try {
     const convoPayload = {
       title: title || promptText.slice(0, 30) + "...",
       model,
       target_ratio: targetRatio,
+      user_id: userId,
     };
-
-    if (userId) {
-      convoPayload.user_id = userId;
-    }
 
     // 1. Create conversation record
     const { data: convo, error: convoError } = await supabase
