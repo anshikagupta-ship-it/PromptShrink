@@ -1,4 +1,5 @@
 // API Service for ContextZero Engine
+export const API_VERSION = "1.0.4";
 
 export const PRESET_SAMPLES = [
   {
