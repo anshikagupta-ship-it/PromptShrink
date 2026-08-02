@@ -1,34 +1,25 @@
 import React, { useState } from "react";
-import { estimateTokens } from "../services/api";
+import { estimateTokens, PRESET_SAMPLES } from "../services/api";
 
 export default function LandingLiveCompressor() {
-  const [inputPrompt, setInputPrompt] = useState(
-    `I am currently in the process of developing a React application and I would like to know how I can implement Google OAuth authentication. We have a backend running Node.js and Express. Could you please provide a step by step guide along with code examples for both frontend and backend? Thank you so much for your assistance!`
-  );
+  const p0 = PRESET_SAMPLES?.[0]?.context || "";
+  const p1 = PRESET_SAMPLES?.[1]?.context || "";
+  const p2 = PRESET_SAMPLES?.[2]?.context || "";
+
+  const [inputPrompt, setInputPrompt] = useState(p0);
 
   const samplePrompts = [
     {
-      name: "React & OAuth",
-      text: `I am currently in the process of developing a React application and I would like to know how I can implement Google OAuth authentication. We have a backend running Node.js and Express. Could you please provide a step by step guide along with code examples for both frontend and backend? Thank you so much for your assistance!`,
+      name: "Server Incident Logs",
+      text: p0,
     },
     {
-      name: "Server Incident Log",
-      text: `[2026-08-01 10:14:01] INFO [auth-service] Health check OK. Response time 12ms.
-[2026-08-01 10:14:02] INFO [auth-service] User session validated for user_id=98214.
-[2026-08-01 10:14:05] WARN [payment-gateway] Connection pool at 85% capacity. Retrying...
-[2026-08-01 10:14:07] ERROR [payment-gateway] HTTP 429 Too Many Requests from upstream stripe-api /v1/charges.
-[2026-08-01 10:14:07] ERROR [payment-gateway] Retry attempt 1 failed with status 429.
-[2026-08-01 10:14:08] ERROR [payment-gateway] Retry attempt 2 failed with status 429.
-[2026-08-01 10:14:10] CRITICAL [order-processor] DB Connection spike! Active: 450/500 connections. Backlog: 12,500 items.`,
+      name: "Customer Support History",
+      text: p1,
     },
     {
-      name: "Support Thread",
-      text: `Customer (10:00 AM): Hello, is anyone available to help me today? Hope you're having a good morning!
-Agent (10:01 AM): Hello! Thanks for reaching out to CloudSupport. My name is Alex. How can I assist you today?
-Customer (10:02 AM): Hi Alex! I am trying to upgrade my database tier from Standard to Enterprise on subscription plan #941, but the invoice INV-4402 is pending.
-Agent (10:07 AM): Thanks for waiting! Once invoice INV-4402 is settled, plan #941 upgrade unlocks.
-Customer (10:08 AM): I just paid invoice INV-4402 via credit card. Can you verify?
-Agent (10:10 AM): Verified! Invoice INV-4402 is settled. Upgrade is active.`,
+      name: "API Documentation Spec",
+      text: p2,
     },
   ];
 
