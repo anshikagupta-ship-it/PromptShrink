@@ -14,8 +14,15 @@ const router = Router();
  */
 function runCliCompressor(promptText) {
   return new Promise((resolve, reject) => {
-    // Instead of hardcoding the interpreter, use an environment variable.
-    const pythonExe = process.env.PYTHON_EXECUTABLE || (process.platform === "win32" ? "python" : "python3");
+    let pythonExe = process.env.PYTHON_EXECUTABLE;
+    if (!pythonExe) {
+      const venvPath = path.join(process.cwd(), ".venv", process.platform === "win32" ? "Scripts" : "bin", process.platform === "win32" ? "python.exe" : "python");
+      if (fs.existsSync(venvPath)) {
+        pythonExe = venvPath;
+      } else {
+        pythonExe = process.platform === "win32" ? "python" : "python3";
+      }
+    }
 
     // The script path is relative to the project root
     const scriptPath = path.join(process.cwd(), "compressor", "prompt_compressor_py", "main.py");
@@ -45,8 +52,8 @@ function runCliCompressor(promptText) {
     }
 
     // Step 2: Spawn CLI process
-    console.log(`[DEBUG CLI] Spawning command: ${pythonExe} "${scriptPath}" "${inputFile}" "${outputFile}"`);
-    const child = spawn(pythonExe, [scriptPath, inputFile, outputFile]);
+    console.log(`[DEBUG CLI] Spawning command: ${pythonExe} "${scriptPath}" --memory-limit-mb 256 "${inputFile}" "${outputFile}"`);
+    const child = spawn(pythonExe, [scriptPath, "--memory-limit-mb", "256", inputFile, outputFile]);
 
     let stderr = "";
     let stdout = "";
