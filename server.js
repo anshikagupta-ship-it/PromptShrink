@@ -4,6 +4,7 @@ import cookieParser from "cookie-parser";
 import { config } from "./config/env.js";
 import authRoutes from "./routes/authRoutes.js";
 import compressRoutes from "./routes/compressRoutes.js";
+import conversationRoutes from "./routes/conversationRoutes.js";
 
 const app = express();
 
@@ -45,6 +46,7 @@ app.get("/", (req, res) => {
 // Mount Routes
 app.use("/api/auth", authRoutes);
 app.use("/api/v1", compressRoutes);
+app.use("/api/conversations", conversationRoutes);
 
 // Global Error Handler
 app.use((err, req, res, next) => {
