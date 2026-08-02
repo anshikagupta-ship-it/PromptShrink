@@ -27,8 +27,20 @@ export default function Home() {
   const [mode, setMode] = useState("balanced");
   const [targetRatio, setTargetRatio] = useState(70);
 
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
-  const [isDashboardOpen, setIsDashboardOpen] = useState(true);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(() => {
+    // On mobile screens, sidebar is closed by default
+    if (typeof window !== "undefined") {
+      return window.innerWidth >= 768;
+    }
+    return true;
+  });
+  const [isDashboardOpen, setIsDashboardOpen] = useState(() => {
+    // On mobile screens, dashboard panel is also closed by default
+    if (typeof window !== "undefined") {
+      return window.innerWidth >= 1024;
+    }
+    return true;
+  });
 
   const [prompt, setPrompt] = useState("");
   const [messages, setMessages] = useState([]);
