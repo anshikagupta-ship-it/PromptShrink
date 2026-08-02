@@ -1,66 +1,111 @@
 import React, { useState } from "react";
 import { estimateTokens } from "../services/api";
 
-function buildDemoSample(title, originalText, rawOptimizedText) {
-  const origTokens = estimateTokens(originalText);
-  const optTokens = estimateTokens(rawOptimizedText);
-  const saved = Math.max(0, origTokens - optTokens);
-  const reduction = origTokens > 0 ? parseFloat(((saved / origTokens) * 100).toFixed(1)) : 0;
-  const speedup = origTokens > 0 ? `${(origTokens / Math.max(1, optTokens)).toFixed(1)}x` : "1.0x";
+/**
+ * Safely constructs demo sample objects with full try/catch exception handling,
+ * type sanitization, and graceful metric fallbacks.
+ */
+function buildDemoSample(title = "Sample Prompt", originalText = "", rawOptimizedText = "") {
+  try {
+    const safeOrigText = String(originalText || "");
+    const safeOptText = String(rawOptimizedText || "");
 
-  return {
-    title,
-    origTokens,
-    optTokens,
-    reduction,
-    speedup,
-    originalText,
-    optimizedText: `[CONTEXTZERO OPTIMIZED - ${reduction}% Reduction]\n` + rawOptimizedText,
-  };
+    const origTokens = Math.max(
+      0,
+      typeof estimateTokens === "function"
+        ? estimateTokens(safeOrigText)
+        : Math.ceil(safeOrigText.length / 3.8)
+    );
+
+    const optTokens = Math.max(
+      0,
+      typeof estimateTokens === "function"
+        ? estimateTokens(safeOptText)
+        : Math.ceil(safeOptText.length / 3.8)
+    );
+
+    const saved = Math.max(0, origTokens - optTokens);
+    const reduction = origTokens > 0 ? parseFloat(((saved / origTokens) * 100).toFixed(1)) : 0;
+    const speedup = origTokens > 0 ? `${(origTokens / Math.max(1, optTokens)).toFixed(1)}x` : "1.0x";
+
+    return {
+      title: title || "Demo Context",
+      origTokens,
+      optTokens,
+      reduction,
+      speedup,
+      originalText: safeOrigText,
+      optimizedText: safeOptText ? `[CONTEXTZERO OPTIMIZED - ${reduction}% Reduction]\n` + safeOptText : safeOrigText,
+    };
+  } catch (err) {
+    console.error("[LandingDemo] Exception constructing demo sample:", err);
+    return {
+      title: title || "Demo Context",
+      origTokens: 0,
+      optTokens: 0,
+      reduction: 0,
+      speedup: "1.0x",
+      originalText: String(originalText || ""),
+      optimizedText: String(rawOptimizedText || ""),
+    };
+  }
 }
 
 export default function LandingDemo() {
   const [activeTab, setActiveTab] = useState("logs");
 
-  const samples = {
-    logs: buildDemoSample(
-      "Server Incident Logs",
-      `[2026-08-01 10:14:01] INFO [auth-service] Health check OK. Response time 12ms.
+  let samples = {};
+  try {
+    samples = {
+      logs: buildDemoSample(
+        "Server Incident Logs",
+        `[2026-08-01 10:14:01] INFO [auth-service] Health check OK. Response time 12ms.
 [2026-08-01 10:14:02] INFO [auth-service] User session validated for user_id=98214.
 [2026-08-01 10:14:05] WARN [payment-gateway] Connection pool at 85% capacity. Retrying...
 [2026-08-01 10:14:07] ERROR [payment-gateway] HTTP 429 Too Many Requests from upstream stripe-api /v1/charges.
 [2026-08-01 10:14:07] ERROR [payment-gateway] Retry attempt 1 failed with status 429.
 [2026-08-01 10:14:08] ERROR [payment-gateway] Retry attempt 2 failed with status 429.
 [2026-08-01 10:14:10] CRITICAL [order-processor] DB Connection spike! Active: 450/500 connections. Backlog: 12,500 items.`,
-      `ERROR [payment-gateway] HTTP 429 Too Many Requests on upstream endpoint /v1/charges. Retries 1-3 failed.
+        `ERROR [payment-gateway] HTTP 429 Too Many Requests on upstream endpoint /v1/charges. Retries 1-3 failed.
 CRITICAL [order-processor] DB Connection pool spike 450/500. Queue backlog reached 12,500 items.`
-    ),
-    support: buildDemoSample(
-      "Customer Support History",
-      `Customer (10:00 AM): Hello, is anyone available to help me today? Hope you're having a good morning!
+      ),
+      support: buildDemoSample(
+        "Customer Support History",
+        `Customer (10:00 AM): Hello, is anyone available to help me today? Hope you're having a good morning!
 Agent (10:01 AM): Hello! Thanks for reaching out to CloudSupport. My name is Alex. How can I assist you today?
 Customer (10:02 AM): Hi Alex! I am trying to upgrade my database tier from Standard to Enterprise on subscription plan #941.
 Agent (10:03 AM): I understand! Account ACC-88912 has a pending invoice INV-4402 from last month.
 Customer (10:08 AM): I just paid invoice INV-4402 via credit card. Can you verify?
 Agent (10:10 AM): Verified! Invoice INV-4402 is settled. Enterprise tier upgrade is active.`,
-      `User ACC-88912 requested Enterprise upgrade for plan #941.
+        `User ACC-88912 requested Enterprise upgrade for plan #941.
 Blocked by pending invoice INV-4402. Invoice settled via credit card. Upgrade activated successfully.`
-    ),
-    docs: buildDemoSample(
-      "API Documentation",
-      `General Requirements: All requests must include Bearer token authorization in the HTTP Header format: 'Authorization: Bearer <TOKEN>'.
+      ),
+      docs: buildDemoSample(
+        "API Documentation",
+        `General Requirements: All requests must include Bearer token authorization in the HTTP Header format: 'Authorization: Bearer <TOKEN>'.
 Content-Type header must be strictly set to 'application/json'.
 Rate Limiting: Each tenant is capped at 1,000 requests per minute per IP address.
 Error Responses:
 - 400 Bad Request: Returns JSON object {"error": "INVALID_PAYLOAD"}.
 - 401 Unauthorized: Returns JSON object {"error": "MISSING_BEARER_TOKEN"}.
 - 429 Too Many Requests: Returns JSON object {"error": "RATE_LIMIT_EXCEEDED"}.`,
-      `Auth: Header 'Authorization: Bearer <TOKEN>', Content-Type: application/json. Rate Limit: 1,000 req/min/IP.
+        `Auth: Header 'Authorization: Bearer <TOKEN>', Content-Type: application/json. Rate Limit: 1,000 req/min/IP.
 Errors: 400 INVALID_PAYLOAD, 401 MISSING_BEARER_TOKEN, 429 RATE_LIMIT_EXCEEDED.`
-    ),
-  };
+      ),
+    };
+  } catch (err) {
+    console.error("[LandingDemo] Error initializing demo samples:", err);
+  }
 
-  const sample = samples[activeTab];
+  const sample = (samples && samples[activeTab]) || {
+    title: "Demo Context",
+    origTokens: 0,
+    optTokens: 0,
+    reduction: 0,
+    speedup: "1.0x",
+    originalText: "",
+    optimizedText: "",
+  };
 
   return (
     <section id="product" className="py-12 px-6 max-w-5xl mx-auto font-sans">
@@ -107,10 +152,10 @@ Errors: 400 INVALID_PAYLOAD, 401 MISSING_BEARER_TOKEN, 429 RATE_LIMIT_EXCEEDED.`
           <div className="bg-[#1a1a1a] border border-white/[0.07] rounded-xl p-4 space-y-2">
             <div className="flex items-center justify-between text-xs font-sans pb-1 border-b border-white/[0.06]">
               <span className="text-[#a3a3a3] font-medium">Original Prompt</span>
-              <span className="text-[#737373] font-mono">{sample.origTokens.toLocaleString()} tokens</span>
+              <span className="text-[#737373] font-mono">{(sample.origTokens || 0).toLocaleString()} tokens</span>
             </div>
             <div className="text-[#a3a3a3] leading-relaxed whitespace-pre-wrap max-h-48 overflow-y-auto">
-              {sample.originalText}
+              {sample.originalText || "No text available"}
             </div>
           </div>
 
@@ -120,10 +165,10 @@ Errors: 400 INVALID_PAYLOAD, 401 MISSING_BEARER_TOKEN, 429 RATE_LIMIT_EXCEEDED.`
               <span className="text-[#10B981] font-medium flex items-center gap-1.5">
                 <span>✦ ContextZero Optimized</span>
               </span>
-              <span className="text-[#10B981] font-mono font-bold">{sample.optTokens.toLocaleString()} tokens</span>
+              <span className="text-[#10B981] font-mono font-bold">{(sample.optTokens || 0).toLocaleString()} tokens</span>
             </div>
             <div className="text-[#f5f5f5] leading-relaxed whitespace-pre-wrap max-h-48 overflow-y-auto font-medium">
-              {sample.optimizedText}
+              {sample.optimizedText || "No optimized text available"}
             </div>
           </div>
         </div>
@@ -131,7 +176,7 @@ Errors: 400 INVALID_PAYLOAD, 401 MISSING_BEARER_TOKEN, 429 RATE_LIMIT_EXCEEDED.`
         {/* Bottom Metrics Pill */}
         <div className="bg-[#1a1a1a] border border-white/[0.07] p-3 rounded-xl flex flex-wrap items-center justify-around text-center gap-4 text-xs">
           <div>
-            <div className="text-xl font-bold font-mono text-[#10B981]">{sample.reduction}%</div>
+            <div className="text-xl font-bold font-mono text-[#10B981]">{sample.reduction || 0}%</div>
             <div className="text-[11px] text-[#737373] font-sans">Fewer Tokens</div>
           </div>
           <div className="h-6 w-px bg-white/[0.08] hidden sm:block"></div>
@@ -141,7 +186,7 @@ Errors: 400 INVALID_PAYLOAD, 401 MISSING_BEARER_TOKEN, 429 RATE_LIMIT_EXCEEDED.`
           </div>
           <div className="h-6 w-px bg-white/[0.08] hidden sm:block"></div>
           <div>
-            <div className="text-xl font-bold font-mono text-[#f5f5f5]">{sample.speedup}</div>
+            <div className="text-xl font-bold font-mono text-[#f5f5f5]">{sample.speedup || "1.0x"}</div>
             <div className="text-[11px] text-[#737373] font-sans">Faster Response Time</div>
           </div>
         </div>
