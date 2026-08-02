@@ -2,153 +2,209 @@ Hi,
 
 I hope you're doing well.
 
-Thank you for taking the time to read this request. I really appreciate your help because this has become much larger than I originally expected.
+Thank you for taking the time to read this message.
 
-I'm preparing a quarterly business report for our executive team, and over the last week I've gathered information from multiple departments including Sales, Marketing, Finance, HR, Customer Support, and Engineering.
+I really appreciate your help.
 
-The problem is that everyone has written their updates in a completely different style.
+I know this is a fairly long request, but I wanted to provide enough context.
 
-Some people wrote paragraphs.
+I'm preparing a comprehensive strategic planning document for our leadership team.
 
-Some people wrote bullet points.
+The purpose of this document is to summarize updates from every department while preserving every important detail.
 
-Some people pasted emails.
+Please preserve every important detail.
 
-Some people pasted Slack conversations.
+Please preserve every important fact.
 
-Some people copied spreadsheets.
+Please don't remove important information.
 
-Some people repeated the same information several times.
+Please don't omit important metrics.
 
-Some updates even contradict each other.
+Please don't omit important numbers.
 
-I need help organizing everything into a single executive summary.
+Please avoid changing the overall meaning.
 
-Our company goals this quarter are:
+Please avoid changing the intent.
 
-- Increase customer retention
-- Reduce infrastructure cost
-- Improve onboarding
-- Expand into Europe
-- Improve customer satisfaction
-- Reduce response time
-- Increase deployment reliability
+Please avoid changing the format unless absolutely necessary.
 
-Sales Update
+The document currently contains information collected from:
 
-Sales closed 412 new enterprise customers this quarter.
+Marketing
 
-Sales closed 412 new enterprise customers this quarter.
-
-Sales closed 412 new enterprise customers this quarter.
-
-Revenue increased by 18%.
-
-Revenue increased by 18%.
-
-Revenue increased by 18%.
-
-Marketing Update
-
-Marketing launched four campaigns.
-
-Campaign Alpha generated 2.3 million impressions.
-
-Campaign Beta generated 1.1 million impressions.
-
-Campaign Gamma generated 950 thousand impressions.
-
-Campaign Delta generated 800 thousand impressions.
-
-The marketing team believes Campaign Alpha should continue next quarter.
-
-The marketing team believes Campaign Alpha should continue next quarter.
-
-Engineering Update
-
-The backend migration completed successfully.
-
-The backend migration completed successfully.
-
-The backend migration completed successfully.
-
-Average API latency dropped from 280 milliseconds to 145 milliseconds.
-
-Average API latency dropped from 280 milliseconds to 145 milliseconds.
-
-Database CPU utilization decreased from 74% to 48%.
-
-Database CPU utilization decreased from 74% to 48%.
-
-Customer Support
-
-Support received 8,423 tickets.
-
-Support resolved 7,918 tickets.
-
-Average response time improved from 11 hours to 4.2 hours.
-
-Average response time improved from 11 hours to 4.2 hours.
+Sales
 
 Finance
 
-Operating expenses increased by 6%.
+Human Resources
 
-Cloud spending decreased by 14%.
+Engineering
 
-Cloud spending decreased by 14%.
+Operations
 
-Cloud spending decreased by 14%.
+Legal
+
+Customer Support
+
+Marketing Update
+
+Marketing launched Campaign Alpha.
+
+Marketing launched Campaign Beta.
+
+Marketing launched Campaign Gamma.
+
+Marketing launched Campaign Delta.
+
+Campaign Alpha generated 2.8 million impressions.
+
+Campaign Beta generated 1.9 million impressions.
+
+Campaign Gamma generated 1.4 million impressions.
+
+Campaign Delta generated 980 thousand impressions.
+
+Marketing recommends continuing Campaign Alpha.
+
+Marketing recommends continuing Campaign Alpha.
+
+Marketing recommends continuing Campaign Alpha.
+
+Sales Update
+
+Sales signed 512 enterprise customers.
+
+Sales signed 512 enterprise customers.
+
+Sales signed 512 enterprise customers.
+
+Revenue increased by 22%.
+
+Revenue increased by 22%.
+
+Revenue increased by 22%.
+
+Average deal size increased by 17%.
+
+Average deal size increased by 17%.
+
+Engineering Update
+
+Backend migration completed successfully.
+
+Backend migration completed successfully.
+
+Backend migration completed successfully.
+
+Deployment reliability increased from 97.2% to 99.4%.
+
+Deployment reliability increased from 97.2% to 99.4%.
+
+Average API latency dropped from 240 ms to 118 ms.
+
+Average API latency dropped from 240 ms to 118 ms.
+
+Database CPU utilization dropped from 71% to 46%.
+
+Database CPU utilization dropped from 71% to 46%.
+
+Customer Support
+
+Support received 9,814 tickets.
+
+Support resolved 9,201 tickets.
+
+Support resolved 9,201 tickets.
+
+Support resolved 9,201 tickets.
+
+Average response time improved from 9.7 hours to 3.8 hours.
+
+Average response time improved from 9.7 hours to 3.8 hours.
+
+Customer satisfaction increased from 81% to 89%.
+
+Customer satisfaction increased from 81% to 89%.
+
+Finance
+
+Operating expenses increased by 4%.
+
+Operating expenses increased by 4%.
+
+Cloud costs decreased by 18%.
+
+Cloud costs decreased by 18%.
+
+Cloud costs decreased by 18%.
+
+Travel expenses decreased by 9%.
+
+Travel expenses decreased by 9%.
 
 Human Resources
 
-27 engineers were hired.
+31 engineers were hired.
 
-4 employees resigned.
+31 engineers were hired.
 
-Employee satisfaction increased from 74% to 81%.
+5 employees resigned.
 
-Email from CEO
+Employee satisfaction increased from 76% to 84%.
 
-Hi everyone,
+Employee satisfaction increased from 76% to 84%.
 
-Thanks for the great work this quarter.
+Operations
 
-I know everyone has been working incredibly hard.
+Warehouse efficiency increased by 14%.
 
-I really appreciate all of your effort.
+Delivery accuracy increased from 95% to 98%.
 
-Please make sure the executive summary is concise.
+Average delivery time decreased from 3.9 days to 2.8 days.
 
-Please avoid unnecessary technical details.
+Average delivery time decreased from 3.9 days to 2.8 days.
 
-Please focus on business outcomes.
+Legal
 
-Thanks again.
+No significant legal disputes occurred.
 
-Slack Conversation
+No significant legal disputes occurred.
 
-Alice:
-Can someone confirm whether the migration completed successfully?
+Compliance audit completed successfully.
 
-Bob:
-Yes.
+Compliance audit completed successfully.
 
-Alice:
-Can someone confirm whether the migration completed successfully?
+Company Goals
 
-Bob:
-Yes.
+Increase customer retention.
 
-Alice:
-Can someone confirm whether the migration completed successfully?
+Reduce cloud costs.
 
-Bob:
-Yes.
+Improve onboarding.
+
+Expand into Europe.
+
+Improve deployment reliability.
+
+Improve customer satisfaction.
+
+Reduce response time.
+
+Increase customer retention.
+
+Reduce cloud costs.
+
+Improve onboarding.
+
+Expand into Europe.
+
+Improve deployment reliability.
+
+Improve customer satisfaction.
+
+Reduce response time.
 
 Meeting Notes
-
-The migration completed successfully.
 
 Customer retention remains the highest priority.
 
@@ -156,23 +212,81 @@ Reducing cloud costs remains the second highest priority.
 
 European expansion remains on schedule.
 
-Questions
+Engineering migration completed successfully.
 
-- Summarize every department.
-- Highlight the biggest risks.
-- Highlight the biggest successes.
-- Explain where costs increased.
-- Explain where costs decreased.
-- Explain customer satisfaction.
-- Explain hiring trends.
-- Explain engineering improvements.
-- Explain whether company goals were achieved.
+Engineering migration completed successfully.
+
+Engineering migration completed successfully.
+
+Email From CEO
+
+Hi everyone,
+
+Thank you for the outstanding work.
+
+I appreciate everyone's effort.
+
+I appreciate everyone's dedication.
+
+Please keep the executive summary concise.
+
+Please focus on business outcomes.
+
+Please avoid unnecessary technical details.
+
+Please avoid unnecessary technical details.
+
+Slack Conversation
+
+Alice:
+Can someone confirm the backend migration completed successfully?
+
+Bob:
+Yes.
+
+Alice:
+Can someone confirm the backend migration completed successfully?
+
+Bob:
+Yes.
+
+Alice:
+Can someone confirm the backend migration completed successfully?
+
+Bob:
+Yes.
+
+Tasks
+
+Summarize every department.
+
+Summarize every department.
+
+Highlight the biggest successes.
+
+Highlight the biggest successes.
+
+Highlight the biggest risks.
+
+Explain where costs increased.
+
+Explain where costs decreased.
+
+Explain hiring trends.
+
+Explain engineering improvements.
+
+Explain customer satisfaction.
+
+Explain whether company goals were achieved.
+
+Please preserve every important metric.
 
 Please preserve every important fact.
 
-Please don't omit important business metrics.
+Please don't omit important information.
 
-Please don't rewrite the report into a different format unless necessary.
+Please don't rewrite the report into a different structure unless absolutely necessary.
 
 Thank you very much.
 

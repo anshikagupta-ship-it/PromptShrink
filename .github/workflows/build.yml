@@ -2,9 +2,7 @@ name: Build Prompt Compressor
 
 on:
   workflow_dispatch:
-  push:
-    branches:
-      - kartikeya
+
 
 jobs:
   build:
