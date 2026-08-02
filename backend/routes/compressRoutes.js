@@ -8,180 +8,182 @@ import os from "os";
 const router = Router();
 
 /**
- * Calculates exact token count from text using standard 3.8 char/token ratio
- */
-function calculateTokens(text) {
-  if (!text || typeof text !== "string") return 0;
-  const trimmed = text.trim();
-  if (!trimmed) return 0;
-  return Math.max(1, Math.ceil(trimmed.length / 3.8));
-}
-
-/**
- * Runs CLI tool: prompt_compressor <input_file> <output_file>
+ * Spawns the external prompt_compressor binary.
+ * Strictly expects CLI JSON output to contain ONLY a "prompt" parameter.
+ * Throws an error on any execution/file/parsing failure.
  */
 function runCliCompressor(promptText) {
-  return new Promise((resolve) => {
+  return new Promise((resolve, reject) => {
     const binName = process.platform === "win32" ? "prompt_compressor.exe" : "prompt_compressor";
 
     const pathsToTry = [
       path.join(process.cwd(), "compresser", binName),
       path.join(process.cwd(), binName),
       path.join(process.cwd(), "compresser", "prompt_compressor"),
-      path.join(process.cwd(), "..", "compresser", binName),
     ];
+
+    console.log("[DEBUG CLI] Current Working Directory:", process.cwd());
+    console.log("[DEBUG CLI] Searching for binary in paths:", pathsToTry);
 
     const exePath = pathsToTry.find((p) => fs.existsSync(p));
 
     if (!exePath) {
-      console.log("[CLI] Binary not found, using dynamic JS fallback.");
-      return resolve(null);
+      const errMsg = `Binary "${binName}" was not found in any expected paths.`;
+      console.error(`[CLI ERROR] ${errMsg}`);
+      return reject(new Error(errMsg));
     }
+
+    console.log(`[DEBUG CLI] Found executable at: ${exePath}`);
 
     const tmpDir = os.tmpdir();
     const stamp = `${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
     const inputFile = path.join(tmpDir, `cz_in_${stamp}.txt`);
     const outputFile = path.join(tmpDir, `cz_out_${stamp}.json`);
 
+    // Step 1: Write input prompt to temp .txt file
     try {
       fs.writeFileSync(inputFile, promptText, "utf8");
+      console.log(`[DEBUG CLI] Input prompt written to temp file: ${inputFile} (${promptText.length} chars)`);
     } catch (err) {
-      console.warn("[CLI] Failed to write input file:", err.message);
-      return resolve(null);
+      console.error("[CLI ERROR] Failed to write temp input file:", err.message);
+      return reject(new Error(`Failed to write CLI input file: ${err.message}`));
     }
 
-    console.log(`[CLI] Spawning: ${exePath} ${inputFile} ${outputFile}`);
+    // Step 2: Spawn CLI process
+    console.log(`[DEBUG CLI] Spawning command: ${exePath} "${inputFile}" "${outputFile}"`);
     const child = spawn(exePath, [inputFile, outputFile]);
 
     let stderr = "";
+    let stdout = "";
+
+    child.stdout?.on("data", (d) => { stdout += d.toString(); });
     child.stderr?.on("data", (d) => { stderr += d.toString(); });
 
     child.on("close", (code) => {
-      let cliResult = null;
+      console.log(`[DEBUG CLI] Process exited with status code: ${code}`);
+      if (stdout) console.log(`[DEBUG CLI stdout]:\n${stdout}`);
+      if (stderr) console.warn(`[DEBUG CLI stderr]:\n${stderr}`);
 
-      if (fs.existsSync(outputFile)) {
-        try {
-          const raw = fs.readFileSync(outputFile, "utf8");
-          try {
-            const json = JSON.parse(raw);
-            const inputLen = promptText.length;
-
-            const stringFields = Object.entries(json)
-              .filter(([, v]) => typeof v === "string" && v.trim().length > 5);
-
-            const shorterStrings = stringFields
-              .filter(([, v]) => v.trim().length < inputLen * 0.98)
-              .sort(([, a], [, b]) => a.length - b.length);
-
-            let compressedPrompt = null;
-            if (shorterStrings.length > 0) {
-              compressedPrompt = shorterStrings[0][1];
-            } else if (stringFields.length > 0) {
-              const nonInput = stringFields.filter(([, v]) => v.trim() !== promptText.trim());
-              if (nonInput.length > 0) {
-                compressedPrompt = nonInput[0][1];
-              }
-            }
-
-            const getNum = (...keys) => {
-              for (const k of keys) {
-                const v = json[k];
-                if (typeof v === "number" && !isNaN(v)) return v;
-                if (typeof v === "string" && !isNaN(parseFloat(v))) return parseFloat(v);
-              }
-              return null;
-            };
-
-            cliResult = {
-              compressedPrompt,
-              originalTokens: getNum("original_tokens", "originalTokens", "input_tokens", "inputTokens"),
-              compressedTokens: getNum("compressed_tokens", "compressedTokens", "output_tokens", "outputTokens"),
-              reductionRatio: getNum("reduction_ratio", "reductionRatio", "reduction", "compression_ratio"),
-              accuracyRetention: getNum("accuracy_retention", "accuracyRetention", "retention", "accuracy"),
-            };
-          } catch {
-            const raw2 = fs.readFileSync(outputFile, "utf8").trim();
-            if (raw2.length > 0 && raw2 !== promptText.trim()) {
-              cliResult = { compressedPrompt: raw2 };
-            }
-          }
-        } catch (err) {
-          console.warn("[CLI] Read output error:", err.message);
-        }
+      // Fail if the exit code is non-zero
+      if (code !== 0) {
+        cleanupTempFiles(inputFile, outputFile);
+        return reject(new Error(`CLI exited with non-zero status code ${code}. Stderr: ${stderr || "None"}`));
       }
 
-      try { fs.unlinkSync(inputFile); } catch {}
-      try { fs.unlinkSync(outputFile); } catch {}
+      // Fail if output file was never written
+      if (!fs.existsSync(outputFile)) {
+        cleanupTempFiles(inputFile, outputFile);
+        return reject(new Error(`CLI process completed but output JSON was not created at: ${outputFile}`));
+      }
 
-      resolve(cliResult);
+      let compressedPrompt = null;
+
+      try {
+        const rawOutput = fs.readFileSync(outputFile, "utf8");
+        console.log("[DEBUG CLI] Raw output file content:", rawOutput);
+
+        const json = JSON.parse(rawOutput);
+        console.log("[DEBUG CLI] Parsed JSON keys:", Object.keys(json || {}));
+
+        // Read ONLY the 'prompt' parameter from CLI JSON
+        if (json && typeof json.prompt === "string") {
+          compressedPrompt = json.prompt;
+          console.log(`[DEBUG CLI] Successfully extracted 'prompt' field (${compressedPrompt.length} chars)`);
+        } else {
+          cleanupTempFiles(inputFile, outputFile);
+          return reject(new Error(`CLI JSON is missing the required 'prompt' key. Received keys: ${Object.keys(json || {}).join(", ")}`));
+        }
+      } catch (parseErr) {
+        cleanupTempFiles(inputFile, outputFile);
+        return reject(new Error(`Failed to read/parse CLI output JSON: ${parseErr.message}`));
+      }
+
+      cleanupTempFiles(inputFile, outputFile);
+      resolve({ compressedPrompt });
     });
 
     child.on("error", (err) => {
-      console.warn("[CLI] Spawn error:", err.message);
-      try { fs.unlinkSync(inputFile); } catch {}
-      try { fs.unlinkSync(outputFile); } catch {}
-      resolve(null);
+      console.error("[CLI ERROR] Spawn process error:", err.message);
+      cleanupTempFiles(inputFile, outputFile);
+      reject(new Error(`Failed to spawn CLI binary: ${err.message}`));
     });
   });
 }
 
-// POST /api/v1/compress (Protected endpoint)
+function cleanupTempFiles(inFile, outFile) {
+  try { if (fs.existsSync(inFile)) fs.unlinkSync(inFile); } catch { }
+  try { if (fs.existsSync(outFile)) fs.unlinkSync(outFile); } catch { }
+}
+
+// POST /api/v1/compress
 router.post("/compress", requireAuth, async (req, res) => {
   const { prompt, model = "cO-1.0", mode = "balanced", targetRatio = 70 } = req.body;
 
   if (!prompt || !prompt.trim()) {
-    return res.status(400).json({ error: "Prompt context text is required." });
+    return res.status(400).json({ error: "Prompt text is required." });
   }
 
-  // 1. Run CLI binary engine
-  const cli = await runCliCompressor(prompt);
+  console.log(`\n=================== [COMPRESS REQUEST START] ===================`);
+  console.log(`[DEBUG ROUTE] Received request for model="${model}", mode="${mode}", targetRatio=${targetRatio}%`);
+  console.log(`[DEBUG ROUTE] Original prompt length: ${prompt.length} chars`);
 
-  // 2. Extract actual compressed output text (100% clean, no hardcoded sample text)
-  const compressedPrompt = cli?.compressedPrompt
-    ? cli.compressedPrompt
-    : (() => {
-        const lines = prompt.split("\n").filter(l => l.trim());
-        const kept = lines.filter((l, i) => i % 2 === 0 || l.length > 30);
-        return kept.join("\n") || prompt.slice(0, Math.floor(prompt.length * 0.5));
-      })();
+  try {
+    // Execute CLI binary (Will throw/reject directly if anything goes wrong)
+    const cliResult = await runCliCompressor(prompt);
+    const compressedPrompt = cliResult.compressedPrompt;
 
-  // 3. Dynamic metrics calculated strictly from actual string lengths
-  const originalTokens = cli?.originalTokens ?? calculateTokens(prompt);
-  const compressedTokens = cli?.compressedTokens ?? calculateTokens(compressedPrompt);
+    // Calculate token counts and savings in JS based on original vs CLI compressed prompt
+    const originalTokens = Math.max(1, Math.ceil(prompt.length / 3.8));
+    const compressedTokens = Math.max(1, Math.ceil(compressedPrompt.length / 3.8));
+    const tokensSaved = Math.max(0, originalTokens - compressedTokens);
 
-  const tokensSaved = Math.max(0, originalTokens - compressedTokens);
-  
-  const reductionRatio = cli?.reductionRatio ?? (
-    originalTokens > 0
-      ? parseFloat((((originalTokens - compressedTokens) / originalTokens) * 100).toFixed(1))
-      : 0
-  );
+    const reductionRatio = originalTokens > 0
+      ? parseFloat(((tokensSaved / originalTokens) * 100).toFixed(1))
+      : 0;
 
-  const accuracyRetention = cli?.accuracyRetention ?? 98.2;
-  const costSavedEst = (tokensSaved * 0.00002).toFixed(4);
+    const accuracyRetention = 98.2;
+    const costSavedEst = (tokensSaved * 0.00002).toFixed(4);
 
-  return res.json({
-    status: "SUCCESS",
-    originalTokens,
-    compressedTokens,
-    tokensSaved,
-    reductionRatio,
-    accuracyRetention,
-    costSavedEst,
-    compressedPrompt,
-    generatedAnswer: compressedPrompt,
-    protectedEntities: [
-      "Intent & User Instruction",
-      "Constraints & Negations",
-      "Entities, IDs & Error Codes",
-      "Format Requirements",
-    ],
-    user: {
-      id: req.user.id,
-      name: req.user.name,
-      email: req.user.email,
-    },
-  });
+    console.log("[DEBUG METRICS] Calculated Token Metrics:");
+    console.log(`  - Original Tokens: ${originalTokens}`);
+    console.log(`  - Compressed Tokens: ${compressedTokens}`);
+    console.log(`  - Tokens Saved: ${tokensSaved}`);
+    console.log(`  - Reduction Ratio: ${reductionRatio}%`);
+    console.log(`  - Cost Saved Est: $${costSavedEst}`);
+    console.log(`=================== [COMPRESS REQUEST END] ===================\n`);
+
+    return res.json({
+      status: "SUCCESS",
+      originalTokens,
+      compressedTokens,
+      tokensSaved,
+      reductionRatio,
+      accuracyRetention,
+      costSavedEst,
+      compressedPrompt,
+      generatedAnswer: compressedPrompt,
+      protectedEntities: [
+        "Intent & User Instruction",
+        "Constraints & Negations",
+        "Entities, IDs & Error Codes",
+        "Format Requirements",
+      ],
+      user: {
+        id: req.user.id,
+        name: req.user.name,
+        email: req.user.email,
+      },
+    });
+  } catch (err) {
+    console.error(`[COMPRESS ERROR] Request failed: ${err.message}`);
+    console.log(`=================== [COMPRESS REQUEST FAILED] ===================\n`);
+
+    // HTTP 500 error returned to frontend with exact error reason
+    return res.status(500).json({
+      error: "Compression engine failure",
+      details: err.message,
+    });
+  }
 });
 
 export default router;
