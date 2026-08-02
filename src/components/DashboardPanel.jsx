@@ -150,18 +150,15 @@ export default function DashboardPanel({ latestResult, isOpen, onClose }) {
                 Protected Context Rules
               </div>
               <div className="bg-[#1a1a1a] border border-white/[0.07] rounded-xl p-3 space-y-1.5 text-[11px]">
-                <div className="flex items-center gap-1.5 text-[#a3a3a3]">
-                  <span className="text-[#737373]">🛡️</span>
-                  <span>User Intent & Constraints</span>
-                </div>
-                <div className="flex items-center gap-1.5 text-[#a3a3a3]">
-                  <span className="text-[#737373]">🛡️</span>
-                  <span>HTTP Error Codes & Status</span>
-                </div>
-                <div className="flex items-center gap-1.5 text-[#a3a3a3]">
-                  <span className="text-[#737373]">🛡️</span>
-                  <span>Service IDs & Timestamps</span>
-                </div>
+                {(result.protectedEntities && result.protectedEntities.length > 0
+                  ? result.protectedEntities
+                  : ["User Intent & Constraints", "Format & Negation Rules", "Target Output Boundaries"]
+                ).map((rule, i) => (
+                  <div key={i} className="flex items-center gap-1.5 text-[#a3a3a3]">
+                    <span className="text-[#737373]">🛡️</span>
+                    <span>{rule}</span>
+                  </div>
+                ))}
               </div>
             </div>
           </>

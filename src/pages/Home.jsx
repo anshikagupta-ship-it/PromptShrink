@@ -162,10 +162,11 @@ export default function Home() {
                 result:
                   m.sender === "assistant"
                     ? (() => {
-                        const origToks = m.original_tokens > 0 ? m.original_tokens : estimateTokens(m.content);
-                        const compToks = m.compressed_tokens > 0 ? m.compressed_tokens : estimateTokens(m.content);
+                        const isDummy = m.original_tokens === 1240 || m.reduction_ratio === 72.6 || m.original_tokens === 1850 || m.original_tokens === 2100;
+                        const origToks = (!isDummy && m.original_tokens > 0) ? m.original_tokens : estimateTokens(m.content);
+                        const compToks = (!isDummy && m.compressed_tokens > 0) ? m.compressed_tokens : estimateTokens(m.content);
                         const toksSaved = Math.max(0, origToks - compToks);
-                        const ratio = m.reduction_ratio > 0 ? m.reduction_ratio : (origToks > 0 ? parseFloat(((toksSaved / origToks) * 100).toFixed(1)) : 0);
+                        const ratio = origToks > 0 ? parseFloat(((toksSaved / origToks) * 100).toFixed(1)) : 0;
                         return {
                           originalTokens: origToks,
                           compressedTokens: compToks,
@@ -261,10 +262,11 @@ export default function Home() {
           result:
             m.sender === "assistant"
               ? (() => {
-                  const origToks = m.original_tokens > 0 ? m.original_tokens : estimateTokens(m.content);
-                  const compToks = m.compressed_tokens > 0 ? m.compressed_tokens : estimateTokens(m.content);
+                  const isDummy = m.original_tokens === 1240 || m.reduction_ratio === 72.6 || m.original_tokens === 1850 || m.original_tokens === 2100;
+                  const origToks = (!isDummy && m.original_tokens > 0) ? m.original_tokens : estimateTokens(m.content);
+                  const compToks = (!isDummy && m.compressed_tokens > 0) ? m.compressed_tokens : estimateTokens(m.content);
                   const toksSaved = Math.max(0, origToks - compToks);
-                  const ratio = m.reduction_ratio > 0 ? m.reduction_ratio : (origToks > 0 ? parseFloat(((toksSaved / origToks) * 100).toFixed(1)) : 0);
+                  const ratio = origToks > 0 ? parseFloat(((toksSaved / origToks) * 100).toFixed(1)) : 0;
                   return {
                     originalTokens: origToks,
                     compressedTokens: compToks,
