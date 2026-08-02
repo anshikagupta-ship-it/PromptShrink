@@ -13,6 +13,17 @@ As LLM context windows grow to millions of tokens, developers face severe **Cont
 
 ---
 
+## 📌 Repository Branch Architecture
+
+The project maintains a strict microservices repository layout:
+
+| Component | Git Branch | Core Tech Stack | Hosting & Deployment |
+|---|---|---|---|
+| 💻 **Frontend Web App** | [`amitvista-frontend`](https://github.com/anshikagupta-ship-it/PromptShrink/tree/amitvista-frontend) | React 18, Vite 8, TailwindCSS, Supabase Auth | Vercel Production Deployment |
+| ⚙️ **Backend Compression Engine** | [`amitvista-backend`](https://github.com/anshikagupta-ship-it/PromptShrink/tree/amitvista-backend) | Node.js / Express, PostgreSQL, Redis | Render / Cloud Microservice |
+
+---
+
 ## 🏗️ Architecture Pipeline
 
 ```text
