@@ -222,3 +222,40 @@ export async function deleteConversationDb(conversationId) {
     console.warn("[Supabase] Delete exception:", err.message);
   }
 }
+
+/**
+ * Fetch messages for a specific conversation ID
+ */
+export async function getConversationMessages(conversationId) {
+  if (!conversationId || conversationId.startsWith("hist-")) return [];
+
+  try {
+    const { data: msgs, error } = await supabase
+      .from("messages")
+      .select("*")
+      .eq("conversation_id", conversationId)
+      .order("created_at", { ascending: true });
+
+    if (error || !msgs) return [];
+    return msgs;
+  } catch (err) {
+    console.warn("[Supabase] Fetch messages exception:", err.message);
+    return [];
+  }
+}
+
+/**
+ * Rename a conversation thread title
+ */
+export async function renameConversationDb(conversationId, newTitle) {
+  if (!conversationId || conversationId.startsWith("hist-")) return;
+
+  try {
+    await supabase
+      .from("conversations")
+      .update({ title: newTitle, updated_at: new Date().toISOString() })
+      .eq("id", conversationId);
+  } catch (err) {
+    console.warn("[Supabase] Rename conversation exception:", err.message);
+  }
+}

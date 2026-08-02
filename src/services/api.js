@@ -119,7 +119,7 @@ export async function processCompression({ prompt, model = "cO-1.0", mode = "bal
       compressedInference: 1100,
       preprocessing: 140,
       totalCompressedPath: 1240,
-      speedupFactor: "3.1x",
+      speedupFactor: originalTokens > 0 ? `${(originalTokens / Math.max(1, compressedTokens)).toFixed(1)}x` : "1.0x",
     },
     protectedEntities,
     compressedPrompt,

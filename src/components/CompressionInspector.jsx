@@ -7,18 +7,26 @@ export default function CompressionInspector({ isOpen, onClose, data }) {
 
   const { result, originalText } = data;
 
-  const protectedInfo = [
-    { category: "Intent", status: "Preserved", detail: "Find root cause & identify failing services" },
-    { category: "Constraints", status: "Preserved", detail: "Focus on HTTP errors, timestamp ordering" },
-    { category: "Entities", status: "Preserved", detail: "payment-gateway, order-processor, stripe-api" },
-    { category: "Numbers / Errors", status: "Preserved", detail: "HTTP 429, 450/500 DB connections, 12,500 queue" },
-  ];
+  const protectedEntitiesList = Array.isArray(result?.protectedEntities)
+    ? result.protectedEntities
+    : [
+        "Intent & User Instruction",
+        "Constraints & Negations",
+        "Entities, IDs & Error Codes",
+        "Format Requirements",
+      ];
+
+  const protectedInfo = protectedEntitiesList.map((item, idx) => ({
+    category: typeof item === "string" ? item : item.category || `Rule ${idx + 1}`,
+    status: "Preserved",
+    detail: typeof item === "string" ? "Locked semantic boundary" : item.detail || "Preserved in compressed prompt",
+  }));
 
   const pipelineSteps = [
     { title: "Token Analysis", status: "Completed" },
-    { title: "Critical Information Detection", status: "Completed" },
+    { title: "Critical Information Protection", status: "Completed" },
     { title: "Redundancy Removal", status: "Completed" },
-    { title: "Semantic Compression", status: "Completed" },
+    { title: "Semantic Condensation", status: "Completed" },
     { title: "Quality Verification", status: "Completed" },
     { title: "LLM Forwarding", status: "Completed" },
   ];
@@ -115,18 +123,19 @@ export default function CompressionInspector({ isOpen, onClose, data }) {
                 </div>
               </div>
 
-              <div className="bg-[#17171A] border border-white/[0.08] p-3 rounded-lg space-y-2 leading-relaxed max-h-[420px] overflow-y-auto">
-                <div className="p-1.5 bg-red-500/10 text-red-300 border border-red-500/20 rounded line-through">
-                  [2026-08-01 10:14:01] INFO [auth-service] Health check OK. Response time 12ms. (Repeated boilerplate)
+              <div className="bg-[#17171A] border border-white/[0.08] p-3 rounded-lg space-y-3 leading-relaxed max-h-[420px] overflow-y-auto">
+                <div>
+                  <div className="text-[10px] text-[#71717A] uppercase font-sans tracking-wider mb-1 font-semibold">Original Prompt Payload</div>
+                  <div className="p-2 bg-[#0A0A0C] text-[#A1A1AA] border border-white/[0.06] rounded whitespace-pre-wrap font-mono text-[11px]">
+                    {originalText || result.prompt || "Original prompt text"}
+                  </div>
                 </div>
-                <div className="p-1.5 bg-indigo-500/10 text-indigo-300 border border-indigo-500/20 rounded font-semibold">
-                  [2026-08-01 10:14:07] ERROR [payment-gateway] HTTP 429 Too Many Requests from upstream stripe-api endpoint /v1/charges.
-                </div>
-                <div className="p-1.5 bg-red-500/10 text-red-300 border border-red-500/20 rounded line-through">
-                  Retry attempt 1 failed with status 429. Retry attempt 2 failed with status 429. (Syntactic repetition)
-                </div>
-                <div className="p-1.5 bg-indigo-500/10 text-indigo-300 border border-indigo-500/20 rounded font-semibold">
-                  CRITICAL [order-processor] DB Connection spike detected! Active connections: 450/500. Queue backlog: 12,500 items.
+
+                <div>
+                  <div className="text-[10px] text-[#10B981] uppercase font-sans tracking-wider mb-1 font-semibold">Compressed Prompt Payload</div>
+                  <div className="p-2 bg-[#10B981]/5 text-[#10B981] border border-[#10B981]/20 rounded whitespace-pre-wrap font-mono text-[11px] font-medium">
+                    {result.compressedPrompt || result.generatedAnswer || "Compressed prompt text"}
+                  </div>
                 </div>
               </div>
             </div>

@@ -1,7 +1,7 @@
 import React from "react";
 
 export default function DashboardPanel({ latestResult, isOpen, onClose }) {
-  const hasResult = !!latestResult;
+  const hasResult = !!latestResult && (latestResult.originalTokens > 0 || latestResult.reductionRatio > 0);
   const result = latestResult || {};
 
   // All values come directly from API response — no hardcoding
@@ -11,7 +11,10 @@ export default function DashboardPanel({ latestResult, isOpen, onClose }) {
   const originalTokens = result.originalTokens ?? 0;
   const compressedTokens = result.compressedTokens ?? 0;
   const accuracyRetention = result.accuracyRetention ?? 0;
-  const speedupFactor = result.latencyMs?.speedupFactor ?? null;
+  const speedupFactor =
+    result.speedupFactor ||
+    result.latencyMs?.speedupFactor ||
+    (originalTokens > 0 ? `${(originalTokens / Math.max(1, compressedTokens)).toFixed(1)}x` : null);
 
   return (
     <aside
