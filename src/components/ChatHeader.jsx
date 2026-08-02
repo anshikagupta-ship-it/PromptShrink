@@ -56,57 +56,8 @@ export default function ChatHeader({
         </div>
       </div>
 
-      {/* Right: Compression Mode Segmented Control, Badge & Dashboard Toggle */}
+      {/* Right: Dashboard Toggle only */}
       <div className="flex items-center gap-3">
-        {/* Segmented Control */}
-        <div className="flex items-center p-0.5 bg-[#171717] rounded-lg border border-white/[0.07] text-xs">
-          <button
-            onClick={() => {
-              setMode("conservative");
-              setTargetRatio(50);
-            }}
-            className={`px-2.5 py-1 rounded-md text-xs font-medium transition ${
-              mode === "conservative"
-                ? "bg-[#262626] text-[#f5f5f5]"
-                : "text-[#737373] hover:text-[#a3a3a3]"
-            }`}
-          >
-            Conservative
-          </button>
-          <button
-            onClick={() => {
-              setMode("balanced");
-              setTargetRatio(70);
-            }}
-            className={`px-2.5 py-1 rounded-md text-xs font-medium transition ${
-              mode === "balanced"
-                ? "bg-[#262626] text-[#f5f5f5]"
-                : "text-[#737373] hover:text-[#a3a3a3]"
-            }`}
-          >
-            Balanced
-          </button>
-          <button
-            onClick={() => {
-              setMode("aggressive");
-              setTargetRatio(85);
-            }}
-            className={`px-2.5 py-1 rounded-md text-xs font-medium transition ${
-              mode === "aggressive"
-                ? "bg-[#262626] text-[#f5f5f5]"
-                : "text-[#737373] hover:text-[#a3a3a3]"
-            }`}
-          >
-            Aggressive
-          </button>
-        </div>
-
-        {/* Subdued Target Badge */}
-        <span className="hidden sm:inline-flex text-[11px] font-mono text-[#737373] bg-[#171717] border border-white/[0.07] px-2 py-0.5 rounded-full">
-          Target {targetRatio}%
-        </span>
-
-        {/* Dashboard Toggle Button */}
         <button
           onClick={onToggleDashboard}
           title={isDashboardOpen ? "Collapse Dashboard" : "Expand Dashboard"}
