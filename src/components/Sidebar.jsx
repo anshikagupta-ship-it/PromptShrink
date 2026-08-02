@@ -179,8 +179,8 @@ export default function Sidebar({
           </div>
         </div>
 
-        {/* BENCHMARKS & EVALUATION NAV */}
-        <div className="pt-2 border-t border-white/[0.06] space-y-0.5">
+        {/* BENCHMARKS & EVALUATION NAV - COMMENTED OUT */}
+        {/* <div className="pt-2 border-t border-white/[0.06] space-y-0.5">
           <button
             onClick={() => setCurrentView("benchmarks")}
             className={`w-full text-left px-2.5 py-1.5 rounded-md text-xs font-medium transition flex items-center justify-between ${
@@ -196,7 +196,7 @@ export default function Sidebar({
               <span>Benchmarks Suite</span>
             </div>
           </button>
-        </div>
+        </div> */}
       </div>
 
       {/* User Account Profile & Logout Footer */}
