@@ -123,14 +123,22 @@ export default function Home() {
                 originalTokens: m.original_tokens,
                 result:
                   m.sender === "assistant"
-                    ? {
-                        originalTokens: m.original_tokens,
-                        compressedTokens: m.compressed_tokens,
-                        reductionRatio: m.reduction_ratio,
-                        compressedPrompt: m.content,
-                        generatedAnswer: m.content,
-                        accuracyRetention: m.reduction_ratio > 0 ? parseFloat(Math.max(92, 100 - m.reduction_ratio * 0.08).toFixed(1)) : 100.0,
-                      }
+                    ? (() => {
+                        const origToks = m.original_tokens > 0 ? m.original_tokens : estimateTokens(m.content);
+                        const compToks = m.compressed_tokens > 0 ? m.compressed_tokens : estimateTokens(m.content);
+                        const toksSaved = Math.max(0, origToks - compToks);
+                        const ratio = m.reduction_ratio > 0 ? m.reduction_ratio : (origToks > 0 ? parseFloat(((toksSaved / origToks) * 100).toFixed(1)) : 0);
+                        return {
+                          originalTokens: origToks,
+                          compressedTokens: compToks,
+                          tokensSaved: toksSaved,
+                          reductionRatio: ratio,
+                          costSavedEst: (toksSaved * 0.00002).toFixed(4),
+                          compressedPrompt: m.content,
+                          generatedAnswer: m.content,
+                          accuracyRetention: ratio > 0 ? parseFloat(Math.max(92, 100 - ratio * 0.08).toFixed(1)) : 100.0,
+                        };
+                      })()
                     : null,
               }))
             : [];
@@ -151,6 +159,12 @@ export default function Home() {
     }
     loadDbConversations();
   }, [isAuthChecked, user?.id]);
+
+  useEffect(() => {
+    if (messages.length === 0) {
+      setLatestResult(null);
+    }
+  }, [messages]);
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -208,14 +222,22 @@ export default function Home() {
           originalTokens: m.original_tokens,
           result:
             m.sender === "assistant"
-              ? {
-                  originalTokens: m.original_tokens,
-                  compressedTokens: m.compressed_tokens,
-                  reductionRatio: m.reduction_ratio,
-                  compressedPrompt: m.content,
-                  generatedAnswer: m.content,
-                  accuracyRetention: m.reduction_ratio > 0 ? parseFloat(Math.max(92, 100 - m.reduction_ratio * 0.08).toFixed(1)) : 100.0,
-                }
+              ? (() => {
+                  const origToks = m.original_tokens > 0 ? m.original_tokens : estimateTokens(m.content);
+                  const compToks = m.compressed_tokens > 0 ? m.compressed_tokens : estimateTokens(m.content);
+                  const toksSaved = Math.max(0, origToks - compToks);
+                  const ratio = m.reduction_ratio > 0 ? m.reduction_ratio : (origToks > 0 ? parseFloat(((toksSaved / origToks) * 100).toFixed(1)) : 0);
+                  return {
+                    originalTokens: origToks,
+                    compressedTokens: compToks,
+                    tokensSaved: toksSaved,
+                    reductionRatio: ratio,
+                    costSavedEst: (toksSaved * 0.00002).toFixed(4),
+                    compressedPrompt: m.content,
+                    generatedAnswer: m.content,
+                    accuracyRetention: ratio > 0 ? parseFloat(Math.max(92, 100 - ratio * 0.08).toFixed(1)) : 100.0,
+                  };
+                })()
               : null,
         }));
 
