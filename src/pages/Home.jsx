@@ -47,6 +47,44 @@ export default function Home() {
   const [isLoading, setIsLoading] = useState(false);
   const [activeConvoId, setActiveConvoId] = useState(null);
 
+  // Sanitize legacy mock objects (e.g., 1240 / 340 / 72.6) from local cache
+  const sanitizeHistoryItems = (list) => {
+    if (!Array.isArray(list)) return [];
+    return list.map((item) => {
+      if (!item || !Array.isArray(item.messages)) return item;
+      const cleanMsgs = item.messages.map((m) => {
+        if (
+          m?.result &&
+          (m.result.originalTokens === 1240 ||
+            m.result.reductionRatio === 72.6 ||
+            m.result.originalTokens === 1850 ||
+            m.result.originalTokens === 2100)
+        ) {
+          const textContent = m.text || m.content || "";
+          const origToks = estimateTokens(textContent);
+          const compToks = estimateTokens(textContent);
+          const toksSaved = Math.max(0, origToks - compToks);
+          const ratio = origToks > 0 ? parseFloat(((toksSaved / origToks) * 100).toFixed(1)) : 0;
+          return {
+            ...m,
+            result: {
+              originalTokens: origToks,
+              compressedTokens: compToks,
+              tokensSaved,
+              reductionRatio: ratio,
+              costSavedEst: (toksSaved * 0.00002).toFixed(4),
+              compressedPrompt: textContent,
+              generatedAnswer: textContent,
+              accuracyRetention: "Coming Soon",
+            },
+          };
+        }
+        return m;
+      });
+      return { ...item, messages: cleanMsgs };
+    });
+  };
+
   // Compute user-scoped cache key using user.id UUID (matching users.id in Supabase)
   const accountKey = user?.id;
   const cacheKey = accountKey ? `cz_recent_history_${accountKey}` : "cz_recent_history_guest";
@@ -55,7 +93,7 @@ export default function Home() {
   const [recentHistory, setRecentHistory] = useState(() => {
     try {
       const cached = localStorage.getItem(cacheKey);
-      return cached ? JSON.parse(cached) : [];
+      return cached ? sanitizeHistoryItems(JSON.parse(cached)) : [];
     } catch {
       return [];
     }
@@ -96,7 +134,7 @@ export default function Home() {
       // Guest mode -> load guest cache or empty
       try {
         const guestCache = localStorage.getItem("cz_recent_history_guest");
-        setRecentHistory(guestCache ? JSON.parse(guestCache) : []);
+        setRecentHistory(guestCache ? sanitizeHistoryItems(JSON.parse(guestCache)) : []);
       } catch {
         setRecentHistory([]);
       }
@@ -106,7 +144,7 @@ export default function Home() {
     // Pre-populate with user's specific local cache while DB query resolves
     try {
       const userCache = localStorage.getItem(`cz_recent_history_${currentAccountKey}`);
-      setRecentHistory(userCache ? JSON.parse(userCache) : []);
+      setRecentHistory(userCache ? sanitizeHistoryItems(JSON.parse(userCache)) : []);
     } catch {
       setRecentHistory([]);
     }
