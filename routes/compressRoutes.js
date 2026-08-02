@@ -127,7 +127,7 @@ function cleanupTempFiles(inFile, outFile) {
 }
 
 // POST /api/v1/compress
-router.post("/compress", requireAuth, async (req, res) => {
+router.post("/compress", optionalAuth, async (req, res) => {
   const { prompt, model = "cO-1.0", mode = "balanced", targetRatio = 70 } = req.body;
 
   if (!prompt || !prompt.trim()) {

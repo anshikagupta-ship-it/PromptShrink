@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { requireAuth } from "../middleware/authMiddleware.js";
+import { requireAuth, optionalAuth } from "../middleware/authMiddleware.js";
 import { spawn } from "child_process";
 import path from "path";
 import fs from "fs";
@@ -116,7 +116,7 @@ function cleanupTempFiles(inFile, outFile) {
 }
 
 // POST /api/v1/compress
-router.post("/compress", requireAuth, async (req, res) => {
+router.post("/compress", optionalAuth, async (req, res) => {
   const { prompt, model = "cO-1.0", mode = "balanced", targetRatio = 70 } = req.body;
 
   if (!prompt || !prompt.trim()) {
@@ -178,22 +178,14 @@ router.post("/compress", requireAuth, async (req, res) => {
         "Entities, IDs & Error Codes",
         "Format Requirements",
       ],
-      user: {
-        id: req.user.id,
-        name: req.user.name,
-        email: req.user.email,
-      },
+      user: req.user
+        ? {
+            id: req.user.id,
+            name: req.user.name,
+            email: req.user.email,
+          }
+        : null,
     });
-  } catch (err) {
-    console.error(`[COMPRESS ERROR] Request failed: ${err.message}`);
-    console.log(`=================== [COMPRESS REQUEST FAILED] ===================\n`);
-
-    // HTTP 500 error returned to frontend with exact error reason
-    return res.status(500).json({
-      error: "Compression engine failure",
-      details: err.message,
-    });
-  }
 });
 
 export default router;
