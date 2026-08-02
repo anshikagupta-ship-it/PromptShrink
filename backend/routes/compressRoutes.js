@@ -155,7 +155,7 @@ router.post("/compress", optionalAuth, async (req, res) => {
       ? parseFloat(((tokensSaved / originalTokens) * 100).toFixed(1))
       : 0;
 
-    const accuracyRetention = 98.2;
+    const accuracyRetention = "Coming Soon";
     const costSavedEst = (tokensSaved * 0.00002).toFixed(4);
 
     console.log("[DEBUG METRICS] Calculated Token Metrics:");
