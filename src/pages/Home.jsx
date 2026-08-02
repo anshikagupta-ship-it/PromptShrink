@@ -72,9 +72,14 @@ export default function Home() {
     async function loadDbConversations() {
       // Always use the stable Google email as the permanent account identity key
       const accountKey = user?.email;
-      if (!accountKey) return; // Not logged in — nothing to load
+      console.log("[Home] Auth checked. user.email:", accountKey, "| isAuthChecked:", isAuthChecked);
+      if (!accountKey) {
+        console.log("[Home] No accountKey - user not logged in, skipping DB load.");
+        return;
+      }
 
       const dbConvos = await getUserConversations(accountKey);
+      console.log("[Home] Supabase DB conversations loaded:", dbConvos?.length, dbConvos);
       if (dbConvos && dbConvos.length > 0) {
         setRecentHistory(() => {
           return dbConvos.map((dbc) => {
@@ -107,6 +112,8 @@ export default function Home() {
             };
           });
         });
+      } else {
+        console.log("[Home] No conversations found in Supabase for:", accountKey);
       }
     }
     loadDbConversations();
@@ -274,7 +281,8 @@ export default function Home() {
     if (!activeConvoId) {
       // First turn in a new chat session -> Create new conversation thread in DB
       const newTitle = textToSend.slice(0, 30) + "...";
-      const accountKey = user?.email || user?.id;
+      const accountKey = user?.email;
+      console.log("[Home] Saving new conversation. user.email (accountKey):", accountKey, "| user object:", user);
       const savedConvo = await saveConversationThread({
         userId: accountKey,
         title: newTitle,
@@ -284,6 +292,7 @@ export default function Home() {
         result: res,
       });
 
+      console.log("[Home] saveConversationThread result:", savedConvo);
       const convoId = savedConvo?.id || `hist-${Date.now()}`;
       setActiveConvoId(convoId);
 
