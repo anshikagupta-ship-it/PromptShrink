@@ -70,9 +70,10 @@ export default function Home() {
     if (!isAuthChecked) return;
 
     async function loadDbConversations() {
-      // Always use the stable Google email as the permanent account identity key
-      const accountKey = user?.email;
-      console.log("[Home] Auth checked. user.email:", accountKey, "| isAuthChecked:", isAuthChecked);
+      // Use user.id UUID — matches the foreign key constraint on conversations.user_id → users.id
+      // user.id is now stable in Supabase (not ephemeral SQLite) after backend migration
+      const accountKey = user?.id;
+      console.log("[Home] Auth checked. user.id:", accountKey, "user.email:", user?.email, "| isAuthChecked:", isAuthChecked);
       if (!accountKey) {
         console.log("[Home] No accountKey - user not logged in, skipping DB load.");
         return;
@@ -117,7 +118,7 @@ export default function Home() {
       }
     }
     loadDbConversations();
-  }, [isAuthChecked, user?.email]);
+  }, [isAuthChecked, user?.id]);
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -281,8 +282,8 @@ export default function Home() {
     if (!activeConvoId) {
       // First turn in a new chat session -> Create new conversation thread in DB
       const newTitle = textToSend.slice(0, 30) + "...";
-      const accountKey = user?.email;
-      console.log("[Home] Saving new conversation. user.email (accountKey):", accountKey, "| user object:", user);
+      const accountKey = user?.id;
+      console.log("[Home] Saving new conversation. user.id (accountKey):", accountKey, "| user object:", user);
       const savedConvo = await saveConversationThread({
         userId: accountKey,
         title: newTitle,
