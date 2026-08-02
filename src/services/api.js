@@ -74,17 +74,131 @@ export const PRESET_SAMPLES = [
     title: "Customer Support History",
     description: "Long multi-turn conversation with redundant pleasantries and repeated questions",
     task: "Summarize the customer issue, resolution status, and action items.",
-    context: `Customer (10:00 AM): Hello, is anyone available to help me today? Hope you're having a good morning!
-Agent (10:01 AM): Hello! Thanks for reaching out to CloudSupport. My name is Alex. How can I assist you today?
-Customer (10:02 AM): Hi Alex! I am trying to upgrade my database tier from Standard to Enterprise, but whenever I click the upgrade button on subscription plan #941, the page reloads without saving.
-Agent (10:03 AM): I understand how frustrating that can be! Let me look into subscription plan #941 for you right away. Could you confirm your account ID?
-Customer (10:04 AM): Sure, my account ID is ACC-88912.
-Agent (10:05 AM): Thank you! Let me check account ACC-88912 in our system... Please hold on for a minute.
-Agent (10:07 AM): Thanks for waiting! I see the issue. Account ACC-88912 has a pending invoice from last month. Once invoice INV-4402 is cleared, plan #941 upgrade will unlock automatically.
-Customer (10:08 AM): Oh I see! I just paid invoice INV-4402 via credit card. Can you verify?
-Agent (10:10 AM): Verified! Invoice INV-4402 is settled. The Enterprise tier upgrade on plan #941 is now active.
-Customer (10:11 AM): Awesome, thank you Alex! Have a great day!
-Agent (10:12 AM): You're very welcome! Thank you for choosing CloudSupport!`,
+    context: `User:
+Hi! I'm building an AI-powered project management platform.
+
+Assistant:
+That sounds interesting. What features are you planning?
+
+User:
+The platform should support authentication, projects, tasks, comments, notifications, analytics, and AI summaries.
+
+Assistant:
+Understood.
+
+User:
+Please remember that scalability is important.
+
+Assistant:
+Got it. I'll prioritize scalability.
+
+User:
+Please remember that scalability is important.
+
+Assistant:
+Got it. I'll prioritize scalability.
+
+User:
+Please remember that scalability is important.
+
+Assistant:
+Got it. I'll prioritize scalability.
+
+User:
+I also want role-based access control.
+
+Assistant:
+Noted.
+
+User:
+The application should use React for the frontend.
+
+User:
+The application should use FastAPI for the backend.
+
+User:
+The application should use PostgreSQL for the database.
+
+User:
+The application should use Redis for caching.
+
+User:
+The application should use S3-compatible storage.
+
+Assistant:
+Sounds like a solid stack.
+
+User:
+Can you also recommend a deployment strategy?
+
+Assistant:
+Certainly.
+
+User:
+I'd like Docker, Kubernetes, GitHub Actions, Prometheus, Grafana, Loki, and Nginx.
+
+Assistant:
+Understood.
+
+User:
+I'd like Docker, Kubernetes, GitHub Actions, Prometheus, Grafana, Loki, and Nginx.
+
+Assistant:
+Understood.
+
+User:
+I'd like Docker, Kubernetes, GitHub Actions, Prometheus, Grafana, Loki, and Nginx.
+
+Assistant:
+Understood.
+
+User:
+Please explain every architectural decision.
+
+User:
+Compare alternatives.
+
+User:
+Mention tradeoffs.
+
+User:
+Explain why each technology was chosen.
+
+Assistant:
+Certainly.
+
+User:
+Also include diagrams if possible.
+
+User:
+Also include API examples.
+
+User:
+Also include database schema suggestions.
+
+User:
+Also include folder structure.
+
+Assistant:
+I'll include all of those.
+
+User:
+Thank you.
+
+Assistant:
+You're welcome!
+
+User:
+Thanks again.
+
+Assistant:
+Happy to help.
+
+User:
+Thank you once again.
+
+Assistant:
+Happy to help.`,
   },
   {
     id: "code-spec",
