@@ -1,56 +1,63 @@
 import React, { useState } from "react";
+import { estimateTokens } from "../services/api";
+
+function buildDemoSample(title, originalText, rawOptimizedText) {
+  const origTokens = estimateTokens(originalText);
+  const optTokens = estimateTokens(rawOptimizedText);
+  const saved = Math.max(0, origTokens - optTokens);
+  const reduction = origTokens > 0 ? parseFloat(((saved / origTokens) * 100).toFixed(1)) : 0;
+  const speedup = origTokens > 0 ? `${(origTokens / Math.max(1, optTokens)).toFixed(1)}x` : "1.0x";
+
+  return {
+    title,
+    origTokens,
+    optTokens,
+    reduction,
+    speedup,
+    originalText,
+    optimizedText: `[CONTEXTZERO OPTIMIZED - ${reduction}% Reduction]\n` + rawOptimizedText,
+  };
+}
 
 export default function LandingDemo() {
   const [activeTab, setActiveTab] = useState("logs");
 
   const samples = {
-    logs: {
-      title: "Server Incident Logs",
-      origTokens: 1240,
-      optTokens: 340,
-      reduction: 72.6,
-      originalText: `[2026-08-01 10:14:01] INFO [auth-service] Health check OK. Response time 12ms.
+    logs: buildDemoSample(
+      "Server Incident Logs",
+      `[2026-08-01 10:14:01] INFO [auth-service] Health check OK. Response time 12ms.
 [2026-08-01 10:14:02] INFO [auth-service] User session validated for user_id=98214.
 [2026-08-01 10:14:05] WARN [payment-gateway] Connection pool at 85% capacity. Retrying...
 [2026-08-01 10:14:07] ERROR [payment-gateway] HTTP 429 Too Many Requests from upstream stripe-api /v1/charges.
 [2026-08-01 10:14:07] ERROR [payment-gateway] Retry attempt 1 failed with status 429.
 [2026-08-01 10:14:08] ERROR [payment-gateway] Retry attempt 2 failed with status 429.
 [2026-08-01 10:14:10] CRITICAL [order-processor] DB Connection spike! Active: 450/500 connections. Backlog: 12,500 items.`,
-      optimizedText: `[CONTEXTZERO OPTIMIZED - 72.6% Reduction]
-ERROR [payment-gateway] HTTP 429 Too Many Requests on upstream endpoint /v1/charges. Retries 1-3 failed.
-CRITICAL [order-processor] DB Connection pool spike 450/500. Queue backlog reached 12,500 items.`,
-    },
-    support: {
-      title: "Customer Support History",
-      origTokens: 1850,
-      optTokens: 480,
-      reduction: 74.1,
-      originalText: `Customer (10:00 AM): Hello, is anyone available to help me today? Hope you're having a good morning!
+      `ERROR [payment-gateway] HTTP 429 Too Many Requests on upstream endpoint /v1/charges. Retries 1-3 failed.
+CRITICAL [order-processor] DB Connection pool spike 450/500. Queue backlog reached 12,500 items.`
+    ),
+    support: buildDemoSample(
+      "Customer Support History",
+      `Customer (10:00 AM): Hello, is anyone available to help me today? Hope you're having a good morning!
 Agent (10:01 AM): Hello! Thanks for reaching out to CloudSupport. My name is Alex. How can I assist you today?
 Customer (10:02 AM): Hi Alex! I am trying to upgrade my database tier from Standard to Enterprise on subscription plan #941.
 Agent (10:03 AM): I understand! Account ACC-88912 has a pending invoice INV-4402 from last month.
 Customer (10:08 AM): I just paid invoice INV-4402 via credit card. Can you verify?
 Agent (10:10 AM): Verified! Invoice INV-4402 is settled. Enterprise tier upgrade is active.`,
-      optimizedText: `[CONTEXTZERO OPTIMIZED - 74.1% Reduction]
-User ACC-88912 requested Enterprise upgrade for plan #941.
-Blocked by pending invoice INV-4402. Invoice settled via credit card. Upgrade activated successfully.`,
-    },
-    docs: {
-      title: "API Documentation",
-      origTokens: 2100,
-      optTokens: 520,
-      reduction: 75.2,
-      originalText: `General Requirements: All requests must include Bearer token authorization in the HTTP Header format: 'Authorization: Bearer <TOKEN>'.
+      `User ACC-88912 requested Enterprise upgrade for plan #941.
+Blocked by pending invoice INV-4402. Invoice settled via credit card. Upgrade activated successfully.`
+    ),
+    docs: buildDemoSample(
+      "API Documentation",
+      `General Requirements: All requests must include Bearer token authorization in the HTTP Header format: 'Authorization: Bearer <TOKEN>'.
 Content-Type header must be strictly set to 'application/json'.
 Rate Limiting: Each tenant is capped at 1,000 requests per minute per IP address.
 Error Responses:
 - 400 Bad Request: Returns JSON object {"error": "INVALID_PAYLOAD"}.
 - 401 Unauthorized: Returns JSON object {"error": "MISSING_BEARER_TOKEN"}.
 - 429 Too Many Requests: Returns JSON object {"error": "RATE_LIMIT_EXCEEDED"}.`,
-      optimizedText: `[CONTEXTZERO OPTIMIZED - 75.2% Reduction]
-Auth: Header 'Authorization: Bearer <TOKEN>', Content-Type: application/json. Rate Limit: 1,000 req/min/IP.
-Errors: 400 INVALID_PAYLOAD, 401 MISSING_BEARER_TOKEN, 429 RATE_LIMIT_EXCEEDED.`,
-    },
+      `Auth: Header 'Authorization: Bearer <TOKEN>', Content-Type: application/json. Rate Limit: 1,000 req/min/IP.
+Errors: 400 INVALID_PAYLOAD, 401 MISSING_BEARER_TOKEN, 429 RATE_LIMIT_EXCEEDED.`
+    ),
   };
 
   const sample = samples[activeTab];
@@ -129,12 +136,12 @@ Errors: 400 INVALID_PAYLOAD, 401 MISSING_BEARER_TOKEN, 429 RATE_LIMIT_EXCEEDED.`
           </div>
           <div className="h-6 w-px bg-white/[0.08] hidden sm:block"></div>
           <div>
-            <div className="text-xl font-bold font-mono text-[#f5f5f5]">100%</div>
-            <div className="text-[11px] text-[#737373] font-sans">Same Intent</div>
+            <div className="text-sm font-bold font-mono text-[#a3a3a3]">Coming Soon</div>
+            <div className="text-[11px] text-[#737373] font-sans">Semantic Retention</div>
           </div>
           <div className="h-6 w-px bg-white/[0.08] hidden sm:block"></div>
           <div>
-            <div className="text-xl font-bold font-mono text-[#f5f5f5]">3.2x</div>
+            <div className="text-xl font-bold font-mono text-[#f5f5f5]">{sample.speedup}</div>
             <div className="text-[11px] text-[#737373] font-sans">Faster Response Time</div>
           </div>
         </div>
