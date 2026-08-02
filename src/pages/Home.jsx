@@ -21,7 +21,7 @@ import {
 } from "../services/supabaseClient";
 
 export default function Home() {
-  const { user } = useAuth();
+  const { user, isAuthChecked } = useAuth();
   const [currentView, setCurrentView] = useState("chat"); // 'chat' | 'benchmarks' | 'analytics'
   const [model, setModel] = useState("cO-1.0");
   const [mode, setMode] = useState("balanced");
@@ -64,15 +64,20 @@ export default function Home() {
     }
   }, [recentHistory]);
 
-  // Sync conversations from Supabase on mount / user change
+  // Sync conversations from Supabase ONLY after auth check completes
   useEffect(() => {
+    // Don't run until the /api/auth/me check has completed (prevents querying with null user)
+    if (!isAuthChecked) return;
+
     async function loadDbConversations() {
-      const accountKey = user?.email || user?.id;
+      // Always use the stable Google email as the permanent account identity key
+      const accountKey = user?.email;
+      if (!accountKey) return; // Not logged in — nothing to load
+
       const dbConvos = await getUserConversations(accountKey);
       if (dbConvos && dbConvos.length > 0) {
-        setRecentHistory((prev) => {
+        setRecentHistory(() => {
           return dbConvos.map((dbc) => {
-            const cached = prev.find((p) => p.id === dbc.id);
             const dbMsgs = dbc.messages && dbc.messages.length > 0
               ? dbc.messages.map((m) => ({
                   id: m.id,
@@ -91,18 +96,21 @@ export default function Home() {
                         }
                       : null,
                 }))
-              : null;
+              : [];
 
             return {
-              ...dbc,
-              messages: cached?.messages?.length > 0 ? cached.messages : (dbMsgs || []),
+              id: dbc.id,
+              title: dbc.title,
+              model: dbc.model,
+              createdAt: dbc.created_at,
+              messages: dbMsgs,
             };
           });
         });
       }
     }
     loadDbConversations();
-  }, [user]);
+  }, [isAuthChecked, user?.email]);
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });

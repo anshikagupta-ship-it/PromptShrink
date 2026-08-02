@@ -16,6 +16,7 @@ export function AuthProvider({ children }) {
   });
 
   const [isLoading, setIsLoading] = useState(false);
+  const [isAuthChecked, setIsAuthChecked] = useState(false);
   const [error, setError] = useState(null);
 
   const refreshUser = async () => {
@@ -34,10 +35,20 @@ export function AuthProvider({ children }) {
           try {
             localStorage.setItem("cz_user_profile", JSON.stringify(data.user));
           } catch {}
+        } else {
+          // Cookie is gone / session expired — clear stale cached user
+          setUser(null);
+          try { localStorage.removeItem("cz_user_profile"); } catch {}
         }
+      } else {
+        setUser(null);
+        try { localStorage.removeItem("cz_user_profile"); } catch {}
       }
     } catch (err) {
       console.warn("Auth check warning:", err);
+    } finally {
+      // Always mark auth check as done, whether logged in or not
+      setIsAuthChecked(true);
     }
   };
 
@@ -100,6 +111,7 @@ export function AuthProvider({ children }) {
       value={{
         user,
         isAuthenticated: !!user,
+        isAuthChecked,
         isLoading,
         error,
         loginWithGoogle,

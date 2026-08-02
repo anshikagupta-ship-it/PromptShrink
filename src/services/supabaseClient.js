@@ -19,10 +19,16 @@ export async function getUserConversations(userId) {
     if (error) {
       console.warn("[Supabase] Fetch conversations notice:", error.message);
       // Fallback: try fetching conversations alone without relational join
-      const { data: simpleConvos, error: simpleError } = await supabase
+      let fallbackQuery = supabase
         .from("conversations")
         .select("*")
         .order("created_at", { ascending: false });
+
+      if (userId) {
+        fallbackQuery = fallbackQuery.eq("user_id", userId);
+      }
+
+      const { data: simpleConvos, error: simpleError } = await fallbackQuery;
 
       if (simpleError) {
         console.warn("[Supabase] Fallback fetch conversations notice:", simpleError.message);
